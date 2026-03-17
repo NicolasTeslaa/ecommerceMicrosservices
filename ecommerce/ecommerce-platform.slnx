@@ -5,9 +5,11 @@
   <Folder Name="/services/" />
   <Folder Name="/services/CartService/" />
   <Folder Name="/services/CatalogService/">
-    <Project Path="Catalog.Domain/Catalog.Domain.csproj" />
     <Project Path="services/CatalogService/Catalog.API/Catalog.API.csproj" />
     <Project Path="services/CatalogService/Catalog.Application/Catalog.Application.csproj" />
+    <Project Path="services/CatalogService/Catalog.Domain/Catalog.Domain.csproj" />
+    <Project Path="services/CatalogService/Catalog.Infrastructure/Catalog.Infrastructure.csproj" Id="a373febd-223f-49ba-b5e3-ba5db885e829" />
+    <Project Path="services/CatalogService/Catalog.Tests/Catalog.Tests.csproj" />
   </Folder>
   <Folder Name="/services/InventoryService/" />
   <Folder Name="/services/NotificationService/" />

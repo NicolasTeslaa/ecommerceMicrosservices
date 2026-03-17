@@ -1,0 +1,22 @@
+# Style and Conventions
+- Uses SDK-style .csproj files targeting `net9.0`.
+- Nullable reference types are enabled.
+- Implicit usings are enabled.
+- File-scoped namespaces are used consistently.
+- Naming follows standard C# conventions:
+  - PascalCase for classes, methods, properties, commands, queries, handlers, DTOs
+  - `_camelCase` for private readonly fields
+- ASP.NET Core patterns in use:
+  - top-level statements in `Program.cs`
+  - controller-based APIs with `[ApiController]` and route attributes
+  - gateway middleware configured directly in `Program.cs`
+- `CatalogService` follows layered boundaries:
+  - `Domain` for entities and validation rules
+  - `Application` for use cases and repository abstraction
+  - `Infrastructure` for persistence and dependency injection wiring
+  - `API` for HTTP transport and MediatR dispatch
+- Domain entities use private setters and domain methods for state changes.
+- Validation currently uses guard clauses and exceptions rather than dedicated validation libraries.
+- Constructor injection is used for handlers/controllers.
+- No repository-wide formatting config file was found, so prefer standard `dotnet format` behavior and match the style already present in edited files.
+- Current architecture suggests `Domain` should remain independent from `Application`; avoid reintroducing cross-project dependency from `Domain` back to `Application`.
