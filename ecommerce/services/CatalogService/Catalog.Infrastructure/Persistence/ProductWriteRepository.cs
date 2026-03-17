@@ -1,15 +1,15 @@
-﻿using Catalog.Application.Interfaces;
+using Catalog.Application.Interfaces;
 using Catalog.Domain.Entities;
 using Catalog.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Catalog.Infrastructure.Persistence;
 
-public class ProductRepository : IProductRepository
+public class ProductWriteRepository : IProductWriteRepository
 {
-    private readonly CatalogDbContext _context;
+    private readonly CatalogWriteDbContext _context;
 
-    public ProductRepository(CatalogDbContext context) => _context = context;
+    public ProductWriteRepository(CatalogWriteDbContext context) => _context = context;
 
     public async Task AddAsync(Product product, CancellationToken cancellationToken = default)
     {
@@ -24,29 +24,12 @@ public class ProductRepository : IProductRepository
         }
     }
 
-    public async Task<IEnumerable<Product>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            return await _context.Products
-                .Where(product => product.Active)
-                .AsNoTracking()
-                .ToListAsync(cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            throw new PersistenceException("Failed to retrieve products.", exception);
-        }
-    }
-
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         try
         {
             return await _context.Products
-                .Where(product => product.Active)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(product => product.Id == id && product.Active, cancellationToken);
         }
         catch (Exception exception)
         {

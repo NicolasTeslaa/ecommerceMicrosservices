@@ -1,8 +1,9 @@
 ﻿using Catalog.Application.DTOs;
+using ECommerce.Shared.Contracts;
 using MediatR;
 
 namespace Catalog.Application.Queries;
 
-public class GetAllProductsQuery : IRequest<IEnumerable<ProductDto>>
+public class GetAllProductsQuery : PaginationRequest, IRequest<PagedResult<ProductDto>>
 {
 }

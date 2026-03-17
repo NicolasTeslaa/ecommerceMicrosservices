@@ -7,9 +7,14 @@ namespace Catalog.Application.Handlers;
 
 public class DeactivateProductHandler : IRequestHandler<DeactivateProductCommand, Guid>
 {
-    private readonly IProductRepository _repository;
+    private readonly IProductWriteRepository _repository;
+    private readonly IProductReadModelProjector _projector;
 
-    public DeactivateProductHandler(IProductRepository repository) => _repository = repository;
+    public DeactivateProductHandler(IProductWriteRepository repository, IProductReadModelProjector projector)
+    {
+        _repository = repository;
+        _projector = projector;
+    }
 
     public async Task<Guid> Handle(DeactivateProductCommand request, CancellationToken cancellationToken)
     {
@@ -24,6 +29,7 @@ public class DeactivateProductHandler : IRequestHandler<DeactivateProductCommand
         product.Deactivate();
 
         await _repository.UpdateAsync(product, cancellationToken);
+        await _projector.UpsertAsync(product, cancellationToken);
 
         return product.Id;
     }

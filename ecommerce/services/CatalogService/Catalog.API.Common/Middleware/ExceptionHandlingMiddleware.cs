@@ -1,10 +1,12 @@
 using System.Net;
 using System.Text.Json;
-using Catalog.API.Responses;
 using Catalog.Domain.Enums;
 using Catalog.Domain.Exceptions;
+using ECommerce.Shared.Contracts;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
-namespace Catalog.API.Middleware;
+namespace Catalog.API.Common.Middleware;
 
 public class ExceptionHandlingMiddleware
 {
@@ -48,7 +50,7 @@ public class ExceptionHandlingMiddleware
         context.Response.StatusCode = (int)statusCode;
         context.Response.ContentType = "application/json";
 
-        var response = ApiResponse<object?>.Fail(errorCode, message);
+        var response = ApiResponse<object?>.Fail(errorCode.ToString(), message);
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
@@ -62,6 +64,7 @@ public class ExceptionHandlingMiddleware
             InvalidProductPriceException => HttpStatusCode.BadRequest,
             InvalidStockQuantityException => HttpStatusCode.BadRequest,
             InvalidCategoryIdException => HttpStatusCode.BadRequest,
+            CategoryNotFoundException => HttpStatusCode.NotFound,
             ProductNotFoundException => HttpStatusCode.NotFound,
             PersistenceException => HttpStatusCode.InternalServerError,
             _ => HttpStatusCode.BadRequest

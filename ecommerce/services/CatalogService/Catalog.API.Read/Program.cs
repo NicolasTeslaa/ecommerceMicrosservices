@@ -1,16 +1,13 @@
 using Catalog.Application.Handlers;
-using Catalog.API.Middleware;
-using Catalog.API.Responses;
+using Catalog.API.Common.Middleware;
 using Catalog.Domain.Enums;
 using Catalog.Infrastructure.Configuration;
+using ECommerce.Shared.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -26,7 +23,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
             ? string.Join(" ", errors)
             : "The request payload is invalid.";
 
-        return new BadRequestObjectResult(ApiResponse<object?>.Fail(CatalogErrorCode.InvalidRequest, message));
+        return new BadRequestObjectResult(ApiResponse<object?>.Fail(CatalogErrorCode.InvalidRequest.ToString(), message));
     };
 });
 
@@ -37,7 +34,6 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

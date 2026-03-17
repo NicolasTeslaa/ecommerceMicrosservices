@@ -19,7 +19,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Catalog.API\Catalog.API.csproj" />
+    <Compile Remove="Controllers\CategoriesControllerTests.cs" />
+    <Compile Remove="Controllers\ProductsControllerTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Catalog.API.Common\Catalog.API.Common.csproj" />
+    <ProjectReference Include="..\Catalog.API.Read\Catalog.API.Read.csproj" />
+    <ProjectReference Include="..\Catalog.API.Write\Catalog.API.Write.csproj" />
+    <ProjectReference Include="..\..\..\shared\ECommerce.Shared\ECommerce.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

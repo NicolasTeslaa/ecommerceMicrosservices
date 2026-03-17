@@ -1,6 +1,6 @@
 using Catalog.Domain.Enums;
 
-namespace Catalog.API.Responses;
+namespace Catalog.API.Common.Responses;
 
 public class ApiError
 {

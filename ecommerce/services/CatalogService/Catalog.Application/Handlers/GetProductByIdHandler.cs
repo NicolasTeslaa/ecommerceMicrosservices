@@ -8,9 +8,9 @@ namespace Catalog.Application.Handlers;
 
 public class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, ProductDto?>
 {
-    private readonly IProductRepository _repository;
+    private readonly IProductReadRepository _repository;
 
-    public GetProductByIdHandler(IProductRepository repository) => _repository = repository;
+    public GetProductByIdHandler(IProductReadRepository repository) => _repository = repository;
 
     public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
@@ -22,6 +22,6 @@ public class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, Produc
         if (product is null)
             throw new ProductNotFoundException(request.Id);
 
-        return ProductDto.MapFromEntity(product);
+        return ProductDto.MapFromReadModel(product);
     }
 }

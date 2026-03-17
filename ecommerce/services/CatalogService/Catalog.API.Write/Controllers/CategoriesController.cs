@@ -1,22 +1,17 @@
-using Catalog.API.Responses;
 using Catalog.Application.Commands;
-using Catalog.Application.DTOs;
-using Catalog.Application.Queries;
+using ECommerce.Shared.Contracts;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Catalog.API.Controllers;
+namespace Catalog.API.Write.Controllers;
 
 [ApiController]
 [Route("api/catalog/categories")]
-public class CategoriesController : ControllerBase
+public class CategoriesWriteController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public CategoriesController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+    public CategoriesWriteController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost]
     public async Task<ActionResult<ApiResponse<Guid>>> Create([FromBody] CreateCategoryCommand command)
@@ -24,23 +19,7 @@ public class CategoriesController : ControllerBase
         var id = await _mediator.Send(command);
         var response = ApiResponse<Guid>.Ok(id, "Category created successfully.");
 
-        return CreatedAtAction(nameof(GetById), new { id }, response);
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<CategoryDto>>> GetById(Guid id)
-    {
-        var category = await _mediator.Send(new GetCategoryByIdQuery(id));
-
-        return Ok(ApiResponse<CategoryDto>.Ok(category, "Category retrieved successfully."));
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<ApiResponse<IEnumerable<CategoryDto>>>> GetAll()
-    {
-        var result = await _mediator.Send(new GetAllCategoriesQuery());
-
-        return Ok(ApiResponse<IEnumerable<CategoryDto>>.Ok(result, "Categories retrieved successfully."));
+        return Accepted(response);
     }
 
     [HttpPut("{id:guid}")]

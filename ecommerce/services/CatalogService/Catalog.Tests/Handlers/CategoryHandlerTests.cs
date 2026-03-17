@@ -2,21 +2,25 @@ using Catalog.Application.Commands;
 using Catalog.Application.Handlers;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Queries;
+using Catalog.Application.ReadModels;
 using Catalog.Domain.Entities;
 using Catalog.Domain.Exceptions;
+using ECommerce.Shared.Contracts;
 using Moq;
 
 namespace Catalog.Tests.Handlers;
 
 public class CreateCategoryHandlerTests
 {
-    private readonly Mock<ICategoryRepository> _repositoryMock;
+    private readonly Mock<ICategoryWriteRepository> _repositoryMock;
+    private readonly Mock<ICategoryReadModelProjector> _projectorMock;
     private readonly CreateCategoryHandler _handler;
 
     public CreateCategoryHandlerTests()
     {
-        _repositoryMock = new Mock<ICategoryRepository>();
-        _handler = new CreateCategoryHandler(_repositoryMock.Object);
+        _repositoryMock = new Mock<ICategoryWriteRepository>();
+        _projectorMock = new Mock<ICategoryReadModelProjector>();
+        _handler = new CreateCategoryHandler(_repositoryMock.Object, _projectorMock.Object);
     }
 
     [Fact]
@@ -34,23 +38,31 @@ public class CreateCategoryHandlerTests
             .Callback<Category, CancellationToken>((category, _) => capturedCategory = category)
             .Returns(Task.CompletedTask);
 
+        _projectorMock
+            .Setup(x => x.UpsertAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         var result = await _handler.Handle(command, CancellationToken.None);
 
         Assert.NotEqual(Guid.Empty, result);
         Assert.NotNull(capturedCategory);
         Assert.Equal("Hardware", capturedCategory!.Name);
         Assert.Equal(capturedCategory.Id, result);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 
 public class GetCategoryByIdHandlerTests
 {
-    private readonly Mock<ICategoryRepository> _repositoryMock;
+    private readonly Mock<ICategoryReadRepository> _repositoryMock;
     private readonly GetCategoryByIdHandler _handler;
 
     public GetCategoryByIdHandlerTests()
     {
-        _repositoryMock = new Mock<ICategoryRepository>();
+        _repositoryMock = new Mock<ICategoryReadRepository>();
         _handler = new GetCategoryByIdHandler(_repositoryMock.Object);
     }
 
@@ -62,6 +74,10 @@ public class GetCategoryByIdHandlerTests
         var act = () => _handler.Handle(query, CancellationToken.None);
 
         await Assert.ThrowsAsync<InvalidCategoryIdException>(act);
+
+        _repositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -72,7 +88,7 @@ public class GetCategoryByIdHandlerTests
 
         _repositoryMock
             .Setup(x => x.GetByIdAsync(categoryId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Category?)null);
+            .ReturnsAsync((CategoryReadModel?)null);
 
         var act = () => _handler.Handle(query, CancellationToken.None);
 
@@ -82,7 +98,11 @@ public class GetCategoryByIdHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnMappedCategory_WhenCategoryExists()
     {
-        var category = new Category("Hardware");
+        var category = new CategoryReadModel
+        {
+            Id = Guid.NewGuid(),
+            Name = "Hardware"
+        };
         var query = new GetCategoryByIdQuery(category.Id);
 
         _repositoryMock
@@ -99,48 +119,86 @@ public class GetCategoryByIdHandlerTests
 
 public class GetAllCategoriesHandlerTests
 {
-    private readonly Mock<ICategoryRepository> _repositoryMock;
+    private readonly Mock<ICategoryReadRepository> _repositoryMock;
     private readonly GetAllCategoriesHandler _handler;
 
     public GetAllCategoriesHandlerTests()
     {
-        _repositoryMock = new Mock<ICategoryRepository>();
+        _repositoryMock = new Mock<ICategoryReadRepository>();
         _handler = new GetAllCategoriesHandler(_repositoryMock.Object);
     }
 
     [Fact]
     public async Task Handle_ShouldReturnMappedCategories()
     {
-        var categories = new List<Category>
+        var query = new GetAllCategoriesQuery
         {
-            new("Hardware"),
-            new("Monitores")
+            PageNumber = 1,
+            PageSize = 10
+        };
+
+        var categories = new List<CategoryReadModel>
+        {
+            new() { Id = Guid.NewGuid(), Name = "Hardware" },
+            new() { Id = Guid.NewGuid(), Name = "Monitores" }
         };
 
         _repositoryMock
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(categories);
+            .Setup(x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedResult<CategoryReadModel>.Create(categories, query.PageNumber, query.PageSize, categories.Count));
 
-        var result = await _handler.Handle(new GetAllCategoriesQuery(), CancellationToken.None);
-        var list = result.ToList();
+        var result = await _handler.Handle(query, CancellationToken.None);
+        var list = result.Items.ToList();
 
         Assert.Equal(2, list.Count);
         Assert.Equal(categories[0].Id, list[0].Id);
         Assert.Equal(categories[0].Name, list[0].Name);
         Assert.Equal(categories[1].Id, list[1].Id);
         Assert.Equal(categories[1].Name, list[1].Name);
+        Assert.Equal(categories.Count, result.Pagination.TotalItems);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnEmptyList_WhenRepositoryReturnsEmpty()
+    {
+        var query = new GetAllCategoriesQuery
+        {
+            PageNumber = 2,
+            PageSize = 5
+        };
+
+        _repositoryMock
+            .Setup(x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedResult<CategoryReadModel>.Create(Enumerable.Empty<CategoryReadModel>(), query.PageNumber, query.PageSize, 0));
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.Pagination.TotalItems);
+
+        _repositoryMock.Verify(
+            x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 
 public class UpdateCategoryHandlerTests
 {
-    private readonly Mock<ICategoryRepository> _repositoryMock;
+    private readonly Mock<ICategoryWriteRepository> _repositoryMock;
+    private readonly Mock<ICategoryReadModelProjector> _projectorMock;
     private readonly UpdateCategoryHandler _handler;
 
     public UpdateCategoryHandlerTests()
     {
-        _repositoryMock = new Mock<ICategoryRepository>();
-        _handler = new UpdateCategoryHandler(_repositoryMock.Object);
+        _repositoryMock = new Mock<ICategoryWriteRepository>();
+        _projectorMock = new Mock<ICategoryReadModelProjector>();
+        _handler = new UpdateCategoryHandler(_repositoryMock.Object, _projectorMock.Object);
     }
 
     [Fact]
@@ -155,6 +213,14 @@ public class UpdateCategoryHandlerTests
         var act = () => _handler.Handle(command, CancellationToken.None);
 
         await Assert.ThrowsAsync<InvalidCategoryIdException>(act);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _repositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -174,6 +240,10 @@ public class UpdateCategoryHandlerTests
         var act = () => _handler.Handle(command, CancellationToken.None);
 
         await Assert.ThrowsAsync<CategoryNotFoundException>(act);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -194,22 +264,32 @@ public class UpdateCategoryHandlerTests
             .Setup(x => x.UpdateAsync(category, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        _projectorMock
+            .Setup(x => x.UpsertAsync(category, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         var result = await _handler.Handle(command, CancellationToken.None);
 
         Assert.Equal(category.Id, result);
         Assert.Equal("Monitores", category.Name);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(category, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 
 public class DeleteCategoryHandlerTests
 {
-    private readonly Mock<ICategoryRepository> _repositoryMock;
+    private readonly Mock<ICategoryWriteRepository> _repositoryMock;
+    private readonly Mock<ICategoryReadModelProjector> _projectorMock;
     private readonly DeleteCategoryHandler _handler;
 
     public DeleteCategoryHandlerTests()
     {
-        _repositoryMock = new Mock<ICategoryRepository>();
-        _handler = new DeleteCategoryHandler(_repositoryMock.Object);
+        _repositoryMock = new Mock<ICategoryWriteRepository>();
+        _projectorMock = new Mock<ICategoryReadModelProjector>();
+        _handler = new DeleteCategoryHandler(_repositoryMock.Object, _projectorMock.Object);
     }
 
     [Fact]
@@ -220,6 +300,14 @@ public class DeleteCategoryHandlerTests
         var act = () => _handler.Handle(command, CancellationToken.None);
 
         await Assert.ThrowsAsync<InvalidCategoryIdException>(act);
+
+        _projectorMock.Verify(
+            x => x.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _repositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -235,6 +323,10 @@ public class DeleteCategoryHandlerTests
         var act = () => _handler.Handle(command, CancellationToken.None);
 
         await Assert.ThrowsAsync<CategoryNotFoundException>(act);
+
+        _projectorMock.Verify(
+            x => x.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -251,12 +343,20 @@ public class DeleteCategoryHandlerTests
             .Setup(x => x.DeleteAsync(category, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        _projectorMock
+            .Setup(x => x.DeleteAsync(category.Id, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         var result = await _handler.Handle(command, CancellationToken.None);
 
         Assert.Equal(category.Id, result);
 
         _repositoryMock.Verify(
             x => x.DeleteAsync(category, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _projectorMock.Verify(
+            x => x.DeleteAsync(category.Id, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

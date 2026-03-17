@@ -1,20 +1,21 @@
 ﻿using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Queries;
+using ECommerce.Shared.Contracts;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
 
-public class GetAllProductsHandler : IRequestHandler<GetAllProductsQuery, IEnumerable<ProductDto>>
+public class GetAllProductsHandler : IRequestHandler<GetAllProductsQuery, PagedResult<ProductDto>>
 {
-    private readonly IProductRepository _repository;
+    private readonly IProductReadRepository _repository;
 
-    public GetAllProductsHandler(IProductRepository repository) => _repository = repository;
+    public GetAllProductsHandler(IProductReadRepository repository) => _repository = repository;
 
-    public async Task<IEnumerable<ProductDto>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<ProductDto>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken)
     {
-        var products = await _repository.GetAllAsync(cancellationToken);
+        var products = await _repository.GetAllAsync(request, cancellationToken);
 
-        return products.Select(ProductDto.MapFromEntity);
+        return products.Map(ProductDto.MapFromReadModel);
     }
 }

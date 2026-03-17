@@ -2,21 +2,27 @@
 using Catalog.Application.Handlers;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Queries;
+using Catalog.Application.ReadModels;
 using Catalog.Domain.Entities;
 using Catalog.Domain.Exceptions;
+using ECommerce.Shared.Contracts;
 using Moq;
 
 namespace Catalog.Tests.Handlers;
 
 public class CreateProductHandlerTests
 {
-    private readonly Mock<IProductRepository> _repositoryMock;
+    private readonly Mock<IProductWriteRepository> _repositoryMock;
+    private readonly Mock<IProductReadModelProjector> _projectorMock;
+    private readonly Mock<ICategoryWriteRepository> _categoryRepositoryMock;
     private readonly CreateProductHandler _handler;
 
     public CreateProductHandlerTests()
     {
-        _repositoryMock = new Mock<IProductRepository>();
-        _handler = new CreateProductHandler(_repositoryMock.Object);
+        _repositoryMock = new Mock<IProductWriteRepository>();
+        _projectorMock = new Mock<IProductReadModelProjector>();
+        _categoryRepositoryMock = new Mock<ICategoryWriteRepository>();
+        _handler = new CreateProductHandler(_repositoryMock.Object, _projectorMock.Object, _categoryRepositoryMock.Object);
     }
 
     [Fact]
@@ -34,9 +40,17 @@ public class CreateProductHandlerTests
             CategoryId = Guid.NewGuid()
         };
 
+        _categoryRepositoryMock
+            .Setup(x => x.GetByIdAsync(command.CategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Category("Hardware"));
+
         _repositoryMock
             .Setup(x => x.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
             .Callback<Product, CancellationToken>((product, _) => capturedProduct = product)
+            .Returns(Task.CompletedTask);
+
+        _projectorMock
+            .Setup(x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -55,18 +69,86 @@ public class CreateProductHandlerTests
         _repositoryMock.Verify(
             x => x.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
             Times.Once);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(command.CategoryId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowCategoryNotFoundException_WhenCategoryDoesNotExist()
+    {
+        var command = new CreateProductCommand
+        {
+            Name = "Notebook",
+            Description = "Notebook gamer",
+            Price = 5000m,
+            StockQuantity = 10,
+            CategoryId = Guid.NewGuid()
+        };
+
+        _categoryRepositoryMock
+            .Setup(x => x.GetByIdAsync(command.CategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Category?)null);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await Assert.ThrowsAsync<CategoryNotFoundException>(act);
+
+        _repositoryMock.Verify(
+            x => x.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowInvalidCategoryIdException_WhenCategoryIdIsEmpty()
+    {
+        var command = new CreateProductCommand
+        {
+            Name = "Notebook",
+            Description = "Notebook gamer",
+            Price = 5000m,
+            StockQuantity = 10,
+            CategoryId = Guid.Empty
+        };
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await Assert.ThrowsAsync<InvalidCategoryIdException>(act);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _repositoryMock.Verify(
+            x => x.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }
 
 public class DeactivateProductHandlerTests
 {
-    private readonly Mock<IProductRepository> _repositoryMock;
+    private readonly Mock<IProductWriteRepository> _repositoryMock;
+    private readonly Mock<IProductReadModelProjector> _projectorMock;
     private readonly DeactivateProductHandler _handler;
 
     public DeactivateProductHandlerTests()
     {
-        _repositoryMock = new Mock<IProductRepository>();
-        _handler = new DeactivateProductHandler(_repositoryMock.Object);
+        _repositoryMock = new Mock<IProductWriteRepository>();
+        _projectorMock = new Mock<IProductReadModelProjector>();
+        _handler = new DeactivateProductHandler(_repositoryMock.Object, _projectorMock.Object);
     }
 
     [Fact]
@@ -87,6 +169,10 @@ public class DeactivateProductHandlerTests
 
         _repositoryMock.Verify(
             x => x.UpdateAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -114,6 +200,10 @@ public class DeactivateProductHandlerTests
         _repositoryMock.Verify(
             x => x.UpdateAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
             Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -137,6 +227,10 @@ public class DeactivateProductHandlerTests
             .Setup(x => x.UpdateAsync(product, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        _projectorMock
+            .Setup(x => x.UpsertAsync(product, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -151,17 +245,21 @@ public class DeactivateProductHandlerTests
         _repositoryMock.Verify(
             x => x.UpdateAsync(product, It.IsAny<CancellationToken>()),
             Times.Once);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(product, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 
 public class GetAllProductsHandlerTests
 {
-    private readonly Mock<IProductRepository> _repositoryMock;
+    private readonly Mock<IProductReadRepository> _repositoryMock;
     private readonly GetAllProductsHandler _handler;
 
     public GetAllProductsHandlerTests()
     {
-        _repositoryMock = new Mock<IProductRepository>();
+        _repositoryMock = new Mock<IProductReadRepository>();
         _handler = new GetAllProductsHandler(_repositoryMock.Object);
     }
 
@@ -169,30 +267,41 @@ public class GetAllProductsHandlerTests
     public async Task Handle_ShouldReturnMappedProducts()
     {
         // Arrange
-        var products = new List<Product>
+        var query = new GetAllProductsQuery
         {
-            new("Produto 1", "Desc 1", 100m, 5, Guid.NewGuid()),
-            new("Produto 2", "Desc 2", 200m, 8, Guid.NewGuid())
+            PageNumber = 1,
+            PageSize = 10
+        };
+
+        var products = new List<ProductReadModel>
+        {
+            new() { Id = Guid.NewGuid(), Name = "Produto 1", Description = "Desc 1", Price = 100m, StockQuantity = 5, Active = true, CategoryId = Guid.NewGuid() },
+            new() { Id = Guid.NewGuid(), Name = "Produto 2", Description = "Desc 2", Price = 200m, StockQuantity = 8, Active = true, CategoryId = Guid.NewGuid() }
         };
 
         _repositoryMock
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(products);
+            .Setup(x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedResult<ProductReadModel>.Create(products, query.PageNumber, query.PageSize, products.Count));
 
         // Act
-        var result = await _handler.Handle(new GetAllProductsQuery(), CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        var list = result.ToList();
+        var list = result.Items.ToList();
 
         Assert.Equal(2, list.Count);
         Assert.Equal(products[0].Id, list[0].Id);
         Assert.Equal(products[0].Name, list[0].Name);
         Assert.Equal(products[1].Id, list[1].Id);
         Assert.Equal(products[1].Name, list[1].Name);
+        Assert.Equal(products.Count, result.Pagination.TotalItems);
 
         _repositoryMock.Verify(
-            x => x.GetAllAsync(It.IsAny<CancellationToken>()),
+            x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -200,30 +309,41 @@ public class GetAllProductsHandlerTests
     public async Task Handle_ShouldReturnEmptyList_WhenRepositoryReturnsEmpty()
     {
         // Arrange
+        var query = new GetAllProductsQuery
+        {
+            PageNumber = 3,
+            PageSize = 5
+        };
+
         _repositoryMock
-            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Enumerable.Empty<Product>());
+            .Setup(x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedResult<ProductReadModel>.Create(Enumerable.Empty<ProductReadModel>(), query.PageNumber, query.PageSize, 0));
 
         // Act
-        var result = await _handler.Handle(new GetAllProductsQuery(), CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result);
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.Pagination.TotalItems);
 
         _repositoryMock.Verify(
-            x => x.GetAllAsync(It.IsAny<CancellationToken>()),
+            x => x.GetAllAsync(
+                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
 
 public class GetProductByIdHandlerTests
 {
-    private readonly Mock<IProductRepository> _repositoryMock;
+    private readonly Mock<IProductReadRepository> _repositoryMock;
     private readonly GetProductByIdHandler _handler;
 
     public GetProductByIdHandlerTests()
     {
-        _repositoryMock = new Mock<IProductRepository>();
+        _repositoryMock = new Mock<IProductReadRepository>();
         _handler = new GetProductByIdHandler(_repositoryMock.Object);
     }
 
@@ -253,7 +373,7 @@ public class GetProductByIdHandlerTests
 
         _repositoryMock
             .Setup(x => x.GetByIdAsync(productId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Product?)null);
+            .ReturnsAsync((ProductReadModel?)null);
 
         // Act
         var act = () => _handler.Handle(query, CancellationToken.None);
@@ -270,12 +390,16 @@ public class GetProductByIdHandlerTests
     public async Task Handle_ShouldReturnMappedProductDto_WhenProductExists()
     {
         // Arrange
-        var product = new Product(
-            "Teclado",
-            "Teclado mecânico",
-            300m,
-            12,
-            Guid.NewGuid());
+        var product = new ProductReadModel
+        {
+            Id = Guid.NewGuid(),
+            Name = "Teclado",
+            Description = "Teclado mecânico",
+            Price = 300m,
+            StockQuantity = 12,
+            Active = true,
+            CategoryId = Guid.NewGuid()
+        };
 
         var query = new GetProductByIdQuery(product.Id);
 
@@ -304,13 +428,17 @@ public class GetProductByIdHandlerTests
 
 public class UpdateProductHandlerTests
 {
-    private readonly Mock<IProductRepository> _repositoryMock;
+    private readonly Mock<IProductWriteRepository> _repositoryMock;
+    private readonly Mock<IProductReadModelProjector> _projectorMock;
+    private readonly Mock<ICategoryWriteRepository> _categoryRepositoryMock;
     private readonly UpdateProductHandler _handler;
 
     public UpdateProductHandlerTests()
     {
-        _repositoryMock = new Mock<IProductRepository>();
-        _handler = new UpdateProductHandler(_repositoryMock.Object);
+        _repositoryMock = new Mock<IProductWriteRepository>();
+        _projectorMock = new Mock<IProductReadModelProjector>();
+        _categoryRepositoryMock = new Mock<ICategoryWriteRepository>();
+        _handler = new UpdateProductHandler(_repositoryMock.Object, _projectorMock.Object, _categoryRepositoryMock.Object);
     }
 
     [Fact]
@@ -339,6 +467,44 @@ public class UpdateProductHandlerTests
 
         _repositoryMock.Verify(
             x => x.UpdateAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowInvalidCategoryIdException_WhenCategoryIdIsEmpty()
+    {
+        var command = new UpdateProductCommand
+        {
+            Id = Guid.NewGuid(),
+            Name = "Novo nome",
+            Description = "Nova descrição",
+            Price = 999m,
+            StockQuantity = 15,
+            CategoryId = Guid.Empty
+        };
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await Assert.ThrowsAsync<InvalidCategoryIdException>(act);
+
+        _repositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -375,6 +541,61 @@ public class UpdateProductHandlerTests
         _repositoryMock.Verify(
             x => x.UpdateAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
             Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowCategoryNotFoundException_WhenCategoryDoesNotExist()
+    {
+        var productId = Guid.NewGuid();
+
+        var existingProduct = new Product(
+            "Nome antigo",
+            "Descrição antiga",
+            100m,
+            5,
+            Guid.NewGuid());
+
+        var command = new UpdateProductCommand
+        {
+            Id = productId,
+            Name = "Novo nome",
+            Description = "Nova descrição",
+            Price = 999m,
+            StockQuantity = 15,
+            CategoryId = Guid.NewGuid()
+        };
+
+        _repositoryMock
+            .Setup(x => x.GetByIdAsync(productId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingProduct);
+
+        _categoryRepositoryMock
+            .Setup(x => x.GetByIdAsync(command.CategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Category?)null);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await Assert.ThrowsAsync<CategoryNotFoundException>(act);
+
+        _repositoryMock.Verify(
+            x => x.UpdateAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(command.CategoryId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -404,8 +625,16 @@ public class UpdateProductHandlerTests
             .Setup(x => x.GetByIdAsync(product.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
 
+        _categoryRepositoryMock
+            .Setup(x => x.GetByIdAsync(newCategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Category("Monitores"));
+
         _repositoryMock
             .Setup(x => x.UpdateAsync(product, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _projectorMock
+            .Setup(x => x.UpsertAsync(product, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -425,6 +654,14 @@ public class UpdateProductHandlerTests
 
         _repositoryMock.Verify(
             x => x.UpdateAsync(product, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _projectorMock.Verify(
+            x => x.UpsertAsync(product, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _categoryRepositoryMock.Verify(
+            x => x.GetByIdAsync(newCategoryId, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

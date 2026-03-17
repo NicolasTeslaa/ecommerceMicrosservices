@@ -2,10 +2,15 @@
   <Folder Name="/gateway/">
     <Project Path="gateway/ApiGateway/ApiGateway.csproj" />
   </Folder>
+  <Folder Name="/shared/">
+    <Project Path="shared/ECommerce.Shared/ECommerce.Shared.csproj" />
+  </Folder>
   <Folder Name="/services/" />
   <Folder Name="/services/CartService/" />
   <Folder Name="/services/CatalogService/">
-    <Project Path="services/CatalogService/Catalog.API/Catalog.API.csproj" />
+    <Project Path="services/CatalogService/Catalog.API.Common/Catalog.API.Common.csproj" />
+    <Project Path="services/CatalogService/Catalog.API.Read/Catalog.API.Read.csproj" />
+    <Project Path="services/CatalogService/Catalog.API.Write/Catalog.API.Write.csproj" />
     <Project Path="services/CatalogService/Catalog.Application/Catalog.Application.csproj" />
     <Project Path="services/CatalogService/Catalog.Domain/Catalog.Domain.csproj" />
     <Project Path="services/CatalogService/Catalog.Infrastructure/Catalog.Infrastructure.csproj" Id="a373febd-223f-49ba-b5e3-ba5db885e829" />

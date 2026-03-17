@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Catalog.Infrastructure.Persistence;
 
-public class CategoryRepository : ICategoryRepository
+public class CategoryWriteRepository : ICategoryWriteRepository
 {
-    private readonly CatalogDbContext _context;
+    private readonly CatalogWriteDbContext _context;
 
-    public CategoryRepository(CatalogDbContext context) => _context = context;
+    public CategoryWriteRepository(CatalogWriteDbContext context) => _context = context;
 
     public async Task AddAsync(Category category, CancellationToken cancellationToken = default)
     {
@@ -29,27 +29,11 @@ public class CategoryRepository : ICategoryRepository
         try
         {
             return await _context.Categories
-                .AsNoTracking()
                 .FirstOrDefaultAsync(category => category.Id == id, cancellationToken);
         }
         catch (Exception exception)
         {
             throw new PersistenceException($"Failed to retrieve category '{id}'.", exception);
-        }
-    }
-
-    public async Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            return await _context.Categories
-                .AsNoTracking()
-                .OrderBy(category => category.Name)
-                .ToListAsync(cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            throw new PersistenceException("Failed to retrieve categories.", exception);
         }
     }
 

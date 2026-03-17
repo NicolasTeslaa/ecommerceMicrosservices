@@ -7,9 +7,14 @@ namespace Catalog.Application.Handlers;
 
 public class UpdateCategoryHandler : IRequestHandler<UpdateCategoryCommand, Guid>
 {
-    private readonly ICategoryRepository _repository;
+    private readonly ICategoryWriteRepository _repository;
+    private readonly ICategoryReadModelProjector _projector;
 
-    public UpdateCategoryHandler(ICategoryRepository repository) => _repository = repository;
+    public UpdateCategoryHandler(ICategoryWriteRepository repository, ICategoryReadModelProjector projector)
+    {
+        _repository = repository;
+        _projector = projector;
+    }
 
     public async Task<Guid> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
     {
@@ -24,6 +29,7 @@ public class UpdateCategoryHandler : IRequestHandler<UpdateCategoryCommand, Guid
         category.Update(request.Name);
 
         await _repository.UpdateAsync(category, cancellationToken);
+        await _projector.UpsertAsync(category, cancellationToken);
 
         return category.Id;
     }

@@ -1,19 +1,17 @@
 using Catalog.Application.Commands;
-using Catalog.Application.DTOs;
-using Catalog.Application.Queries;
-using Catalog.API.Responses;
+using ECommerce.Shared.Contracts;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Catalog.API.Controllers;
+namespace Catalog.API.Write.Controllers;
 
 [ApiController]
 [Route("api/catalog/products")]
-public class ProductsController : ControllerBase
+public class ProductsWriteController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public ProductsController(IMediator mediator) => _mediator = mediator;
+    public ProductsWriteController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost]
     public async Task<ActionResult<ApiResponse<Guid>>> Create([FromBody] CreateProductCommand command)
@@ -21,23 +19,7 @@ public class ProductsController : ControllerBase
         var id = await _mediator.Send(command);
         var response = ApiResponse<Guid>.Ok(id, "Product created successfully.");
 
-        return CreatedAtAction(nameof(GetById), new { id }, response);
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<ProductDto>>> GetById(Guid id)
-    {
-        var product = await _mediator.Send(new GetProductByIdQuery(id));
-
-        return Ok(ApiResponse<ProductDto>.Ok(product, "Product retrieved successfully."));
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<ApiResponse<IEnumerable<ProductDto>>>> GetAll()
-    {
-        var result = await _mediator.Send(new GetAllProductsQuery());
-
-        return Ok(ApiResponse<IEnumerable<ProductDto>>.Ok(result, "Products retrieved successfully."));
+        return Accepted(response);
     }
 
     [HttpPut("{id:guid}")]

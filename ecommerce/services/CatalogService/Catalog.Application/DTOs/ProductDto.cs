@@ -1,5 +1,6 @@
 ﻿using Catalog.Domain.Entities;
 using System;
+using Catalog.Application.ReadModels;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,20 @@ public class ProductDto
     public Guid CategoryId { get; set; }
 
     public static ProductDto MapFromEntity(Product product)
+    {
+        return new ProductDto
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Description = product.Description,
+            Price = product.Price,
+            StockQuantity = product.StockQuantity,
+            Active = product.Active,
+            CategoryId = product.CategoryId
+        };
+    }
+
+    public static ProductDto MapFromReadModel(ProductReadModel product)
     {
         return new ProductDto
         {

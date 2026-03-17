@@ -8,9 +8,9 @@ namespace Catalog.Application.Handlers;
 
 public class GetCategoryByIdHandler : IRequestHandler<GetCategoryByIdQuery, CategoryDto?>
 {
-    private readonly ICategoryRepository _repository;
+    private readonly ICategoryReadRepository _repository;
 
-    public GetCategoryByIdHandler(ICategoryRepository repository) => _repository = repository;
+    public GetCategoryByIdHandler(ICategoryReadRepository repository) => _repository = repository;
 
     public async Task<CategoryDto?> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
@@ -22,6 +22,6 @@ public class GetCategoryByIdHandler : IRequestHandler<GetCategoryByIdQuery, Cate
         if (category is null)
             throw new CategoryNotFoundException(request.Id);
 
-        return CategoryDto.MapFromEntity(category);
+        return CategoryDto.MapFromReadModel(category);
     }
 }
