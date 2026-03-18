@@ -8,25 +8,27 @@ All commands below are for PowerShell on Windows and should be run from `C:\repo
 - Git status: `git status`
 - Git diff: `git diff`
 
-## .NET restore / build / format / test
+## Backend .NET restore / build / test
 - Restore solution: `dotnet restore .\ecommerce\ecommerce-platform.slnx`
 - Build solution: `dotnet build .\ecommerce\ecommerce-platform.slnx`
 - Format solution: `dotnet format .\ecommerce\ecommerce-platform.slnx`
 - Test solution: `dotnet test .\ecommerce\ecommerce-platform.slnx`
-  - Note: no test projects were found during the latest onboarding refresh.
 
-## Run entrypoints
+## Run backend entrypoints
 - Run API gateway: `dotnet run --project .\ecommerce\gateway\ApiGateway\ApiGateway.csproj`
-- Run catalog API: `dotnet run --project .\ecommerce\services\CatalogService\Catalog.API\Catalog.API.csproj`
+- Run catalog read API: `dotnet run --project .\ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj`
+- Run catalog write API: `dotnet run --project .\ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj`
+- Run cart API: `dotnet run --project .\ecommerce\services\CartService\Cart.API\Cart.API.csproj`
 
-## Useful targeted builds
-- Build gateway only: `dotnet build .\ecommerce\gateway\ApiGateway\ApiGateway.csproj`
-- Build catalog API only: `dotnet build .\ecommerce\services\CatalogService\Catalog.API\Catalog.API.csproj`
-- Build catalog application only: `dotnet build .\ecommerce\services\CatalogService\Catalog.Application\Catalog.Application.csproj`
-- Build catalog domain only: `dotnet build .\ecommerce\services\CatalogService\Catalog.Domain\Catalog.Domain.csproj`
-- Build catalog infrastructure only: `dotnet build .\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj`
+## Frontend SPA
+- Install dependencies: `cd .\ecommerce\spa; npm install`
+- Start dev server: `cd .\ecommerce\spa; npm run dev`
+- Build SPA: `cd .\ecommerce\spa; npm run build`
+- Test SPA: `cd .\ecommerce\spa; npm run test`
+- Lint SPA: `cd .\ecommerce\spa; npm run lint`
 
-## Notes
+## Useful Notes
 - Gateway reverse proxy config lives in `ecommerce/gateway/ApiGateway/appsettings.json`.
-- Catalog API config currently only includes logging and host defaults in `ecommerce/services/CatalogService/Catalog.API/appsettings.json`.
-- Before relying on runtime behavior in `CatalogService`, verify DI wiring for `IProductRepository` and database configuration.
+- Cart service config lives in `ecommerce/services/CartService/Cart.API/appsettings.json`.
+- SPA API integration should normally target the gateway base URL (`http://localhost:5100`) via `VITE_API_BASE_URL`.
+- If backend builds fail for the new Cart projects, check for the existing environment issue around NuGet/MSBuild temp file creation under `obj`.
