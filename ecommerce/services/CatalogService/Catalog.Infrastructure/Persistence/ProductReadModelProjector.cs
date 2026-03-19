@@ -34,7 +34,12 @@ public class ProductReadModelProjector : IProductReadModelProjector
                     Price = product.Price,
                     StockQuantity = product.StockQuantity,
                     Active = product.Active,
-                    CategoryId = product.CategoryId
+                    CategoryId = product.CategoryId,
+                    HeightCm = product.HeightCm,
+                    WidthCm = product.WidthCm,
+                    CubageM3 = product.CubageM3,
+                    WeightKg = product.WeightKg,
+                    OriginZipCode = product.OriginZipCode
                 }, cancellationToken);
             }
             else
@@ -45,6 +50,11 @@ public class ProductReadModelProjector : IProductReadModelProjector
                 existingProduct.StockQuantity = product.StockQuantity;
                 existingProduct.Active = product.Active;
                 existingProduct.CategoryId = product.CategoryId;
+                existingProduct.HeightCm = product.HeightCm;
+                existingProduct.WidthCm = product.WidthCm;
+                existingProduct.CubageM3 = product.CubageM3;
+                existingProduct.WeightKg = product.WeightKg;
+                existingProduct.OriginZipCode = product.OriginZipCode;
             }
 
             await _context.SaveChangesAsync(cancellationToken);

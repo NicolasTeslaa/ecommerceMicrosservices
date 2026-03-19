@@ -1,4 +1,5 @@
 using Catalog.Application.Interfaces;
+using Catalog.Application.Queries;
 using Catalog.Application.ReadModels;
 using Catalog.Domain.Exceptions;
 using ECommerce.Shared.Contracts;
@@ -12,13 +13,29 @@ public class ProductReadRepository : IProductReadRepository
 
     public ProductReadRepository(CatalogReadDbContext context) => _context = context;
 
-    public async Task<PagedResult<ProductReadModel>> GetAllAsync(PaginationRequest pagination, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<ProductReadModel>> GetAllAsync(GetAllProductsQuery pagination, CancellationToken cancellationToken = default)
     {
         try
         {
             var query = _context.Products
                 .Where(product => product.Active)
-                .AsNoTracking()
+                .AsNoTracking();
+
+            if (pagination.CategoryId.HasValue && pagination.CategoryId.Value != Guid.Empty)
+            {
+                query = query.Where(product => product.CategoryId == pagination.CategoryId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(pagination.SearchTerm))
+            {
+                var searchTerm = pagination.SearchTerm.Trim();
+
+                query = query.Where(product =>
+                    EF.Functions.Like(product.Name, $"%{searchTerm}%")
+                    || EF.Functions.Like(product.Description, $"%{searchTerm}%"));
+            }
+
+            query = query
                 .OrderBy(product => product.Name)
                 .ThenBy(product => product.Id);
 

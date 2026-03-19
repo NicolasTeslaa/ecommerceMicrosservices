@@ -6,4 +6,6 @@ namespace Catalog.Application.Queries;
 
 public class GetAllProductsQuery : PaginationRequest, IRequest<PagedResult<ProductDto>>
 {
+    public string? SearchTerm { get; init; }
+    public Guid? CategoryId { get; init; }
 }

@@ -12,6 +12,12 @@ namespace Catalog.Tests.Handlers;
 
 public class CreateProductHandlerTests
 {
+    private const decimal HeightCm = 10m;
+    private const decimal WidthCm = 20m;
+    private const decimal CubageM3 = 0.0100m;
+    private const decimal WeightKg = 1.250m;
+    private const string OriginZipCode = "01001-000";
+
     private readonly Mock<IProductWriteRepository> _repositoryMock;
     private readonly Mock<IProductReadModelProjector> _projectorMock;
     private readonly Mock<ICategoryWriteRepository> _categoryRepositoryMock;
@@ -37,7 +43,12 @@ public class CreateProductHandlerTests
             Description = "Notebook gamer",
             Price = 5000m,
             StockQuantity = 10,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = HeightCm,
+            WidthCm = WidthCm,
+            CubageM3 = CubageM3,
+            WeightKg = WeightKg,
+            OriginZipCode = OriginZipCode
         };
 
         _categoryRepositoryMock
@@ -64,6 +75,11 @@ public class CreateProductHandlerTests
         Assert.Equal(command.Price, capturedProduct.Price);
         Assert.Equal(command.StockQuantity, capturedProduct.StockQuantity);
         Assert.Equal(command.CategoryId, capturedProduct.CategoryId);
+        Assert.Equal(command.HeightCm, capturedProduct.HeightCm);
+        Assert.Equal(command.WidthCm, capturedProduct.WidthCm);
+        Assert.Equal(command.CubageM3, capturedProduct.CubageM3);
+        Assert.Equal(command.WeightKg, capturedProduct.WeightKg);
+        Assert.Equal(command.OriginZipCode, capturedProduct.OriginZipCode);
         Assert.Equal(capturedProduct.Id, result);
 
         _repositoryMock.Verify(
@@ -88,7 +104,12 @@ public class CreateProductHandlerTests
             Description = "Notebook gamer",
             Price = 5000m,
             StockQuantity = 10,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = HeightCm,
+            WidthCm = WidthCm,
+            CubageM3 = CubageM3,
+            WeightKg = WeightKg,
+            OriginZipCode = OriginZipCode
         };
 
         _categoryRepositoryMock
@@ -117,7 +138,12 @@ public class CreateProductHandlerTests
             Description = "Notebook gamer",
             Price = 5000m,
             StockQuantity = 10,
-            CategoryId = Guid.Empty
+            CategoryId = Guid.Empty,
+            HeightCm = HeightCm,
+            WidthCm = WidthCm,
+            CubageM3 = CubageM3,
+            WeightKg = WeightKg,
+            OriginZipCode = OriginZipCode
         };
 
         var act = () => _handler.Handle(command, CancellationToken.None);
@@ -143,7 +169,11 @@ public class DeactivateProductHandlerTests
     private readonly Mock<IProductWriteRepository> _repositoryMock;
     private readonly Mock<IProductReadModelProjector> _projectorMock;
     private readonly DeactivateProductHandler _handler;
-
+    private const decimal HeightCm = 10m;
+    private const decimal WidthCm = 20m;
+    private const decimal CubageM3 = 0.0100m;
+    private const decimal WeightKg = 1.250m;
+    private const string OriginZipCode = "01001-000";
     public DeactivateProductHandlerTests()
     {
         _repositoryMock = new Mock<IProductWriteRepository>();
@@ -215,7 +245,12 @@ public class DeactivateProductHandlerTests
             "Mouse gamer",
             150m,
             20,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         var command = new DeactivateProductCommand(product.Id);
 
@@ -281,7 +316,7 @@ public class GetAllProductsHandlerTests
 
         _repositoryMock
             .Setup(x => x.GetAllAsync(
-                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.Is<GetAllProductsQuery>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(PagedResult<ProductReadModel>.Create(products, query.PageNumber, query.PageSize, products.Count));
 
@@ -300,7 +335,7 @@ public class GetAllProductsHandlerTests
 
         _repositoryMock.Verify(
             x => x.GetAllAsync(
-                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.Is<GetAllProductsQuery>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -317,7 +352,7 @@ public class GetAllProductsHandlerTests
 
         _repositoryMock
             .Setup(x => x.GetAllAsync(
-                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.Is<GetAllProductsQuery>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(PagedResult<ProductReadModel>.Create(Enumerable.Empty<ProductReadModel>(), query.PageNumber, query.PageSize, 0));
 
@@ -330,7 +365,7 @@ public class GetAllProductsHandlerTests
 
         _repositoryMock.Verify(
             x => x.GetAllAsync(
-                It.Is<PaginationRequest>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
+                It.Is<GetAllProductsQuery>(pagination => pagination.PageNumber == query.PageNumber && pagination.PageSize == query.PageSize),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -432,7 +467,11 @@ public class UpdateProductHandlerTests
     private readonly Mock<IProductReadModelProjector> _projectorMock;
     private readonly Mock<ICategoryWriteRepository> _categoryRepositoryMock;
     private readonly UpdateProductHandler _handler;
-
+    private const decimal HeightCm = 10m;
+    private const decimal WidthCm = 20m;
+    private const decimal CubageM3 = 0.0100m;
+    private const decimal WeightKg = 1.250m;
+    private const string OriginZipCode = "01001-000";
     public UpdateProductHandlerTests()
     {
         _repositoryMock = new Mock<IProductWriteRepository>();
@@ -452,7 +491,12 @@ public class UpdateProductHandlerTests
             Description = "Nova descrição",
             Price = 999m,
             StockQuantity = 15,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = HeightCm,
+            WidthCm = WidthCm,
+            CubageM3 = CubageM3,
+            WeightKg = WeightKg,
+            OriginZipCode = OriginZipCode
         };
 
         // Act
@@ -488,7 +532,12 @@ public class UpdateProductHandlerTests
             Description = "Nova descrição",
             Price = 999m,
             StockQuantity = 15,
-            CategoryId = Guid.Empty
+            CategoryId = Guid.Empty,
+            HeightCm = HeightCm,
+            WidthCm = WidthCm,
+            CubageM3 = CubageM3,
+            WeightKg = WeightKg,
+            OriginZipCode = OriginZipCode
         };
 
         var act = () => _handler.Handle(command, CancellationToken.None);
@@ -521,7 +570,12 @@ public class UpdateProductHandlerTests
             Description = "Nova descrição",
             Price = 999m,
             StockQuantity = 15,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = HeightCm,
+            WidthCm = WidthCm,
+            CubageM3 = CubageM3,
+            WeightKg = WeightKg,
+            OriginZipCode = OriginZipCode
         };
 
         _repositoryMock
@@ -561,7 +615,12 @@ public class UpdateProductHandlerTests
             "Descrição antiga",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         var command = new UpdateProductCommand
         {
@@ -570,7 +629,12 @@ public class UpdateProductHandlerTests
             Description = "Nova descrição",
             Price = 999m,
             StockQuantity = 15,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = 11m,
+            WidthCm = 21m,
+            CubageM3 = 0.0110m,
+            WeightKg = 1.350m,
+            OriginZipCode = "20040-002"
         };
 
         _repositoryMock
@@ -607,7 +671,12 @@ public class UpdateProductHandlerTests
             "Descrição antiga",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         var newCategoryId = Guid.NewGuid();
 
@@ -618,7 +687,12 @@ public class UpdateProductHandlerTests
             Description = "Descrição nova",
             Price = 250m,
             StockQuantity = 20,
-            CategoryId = newCategoryId
+            CategoryId = newCategoryId,
+            HeightCm = 12m,
+            WidthCm = 22m,
+            CubageM3 = 0.0120m,
+            WeightKg = 1.450m,
+            OriginZipCode = "30130-010"
         };
 
         _repositoryMock
@@ -647,6 +721,11 @@ public class UpdateProductHandlerTests
         Assert.Equal(command.Price, product.Price);
         Assert.Equal(command.StockQuantity, product.StockQuantity);
         Assert.Equal(command.CategoryId, product.CategoryId);
+        Assert.Equal(command.HeightCm, product.HeightCm);
+        Assert.Equal(command.WidthCm, product.WidthCm);
+        Assert.Equal(command.CubageM3, product.CubageM3);
+        Assert.Equal(command.WeightKg, product.WeightKg);
+        Assert.Equal(command.OriginZipCode, product.OriginZipCode);
 
         _repositoryMock.Verify(
             x => x.GetByIdAsync(product.Id, It.IsAny<CancellationToken>()),

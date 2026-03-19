@@ -37,5 +37,30 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.CategoryId)
             .HasColumnName("category_id")
             .IsRequired();
+
+        builder.Property(x => x.HeightCm)
+            .HasColumnName("height_cm")
+            .HasPrecision(10, 2)
+            .IsRequired();
+
+        builder.Property(x => x.WidthCm)
+            .HasColumnName("width_cm")
+            .HasPrecision(10, 2)
+            .IsRequired();
+
+        builder.Property(x => x.CubageM3)
+            .HasColumnName("cubage_m3")
+            .HasPrecision(10, 4)
+            .IsRequired();
+
+        builder.Property(x => x.WeightKg)
+            .HasColumnName("weight_kg")
+            .HasPrecision(10, 3)
+            .IsRequired();
+
+        builder.Property(x => x.OriginZipCode)
+            .HasColumnName("origin_zip_code")
+            .HasMaxLength(20)
+            .IsRequired();
     }
 }

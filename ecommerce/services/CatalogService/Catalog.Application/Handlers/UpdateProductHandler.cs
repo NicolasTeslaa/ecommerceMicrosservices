@@ -44,7 +44,12 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Guid>
             request.Description,
             request.Price,
             request.StockQuantity,
-            request.CategoryId);
+            request.CategoryId,
+            request.HeightCm,
+            request.WidthCm,
+            request.CubageM3,
+            request.WeightKg,
+            request.OriginZipCode);
 
         await _repository.UpdateAsync(product, cancellationToken);
         await _projector.UpsertAsync(product, cancellationToken);

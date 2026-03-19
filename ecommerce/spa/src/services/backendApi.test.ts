@@ -1,5 +1,6 @@
+import { AxiosHeaders } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import backendApi, { productService } from '@/services/backendApi';
+import backendApi, { authService, AUTH_TOKEN_STORAGE_KEY, productService } from '@/services/backendApi';
 
 describe('backendApi productService', () => {
   beforeEach(() => {
@@ -39,5 +40,42 @@ describe('backendApi productService', () => {
     const products = await productService.getAll();
 
     expect(products[0].categoryName).toBe('Placas de Video');
+  });
+
+  it('submits register payload with fullName', async () => {
+    const postSpy = vi.spyOn(backendApi, 'post').mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          userId: 'user-1',
+          customerId: 'customer-1',
+          fullName: 'Alice Example',
+          email: 'alice@example.com',
+          accessToken: 'token-123',
+          expiresAtUtc: '2026-03-18T12:00:00Z',
+        },
+      },
+    } as never);
+
+    await authService.register({
+      fullName: 'Alice Example',
+      email: 'alice@example.com',
+      password: 'secret123',
+    });
+
+    expect(postSpy).toHaveBeenCalledWith('/api/auth/register', {
+      fullName: 'Alice Example',
+      email: 'alice@example.com',
+      password: 'secret123',
+    });
+  });
+
+  it('attaches the bearer token when present in localStorage', async () => {
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, 'token-123');
+
+    const interceptor = backendApi.interceptors.request.handlers[0]?.fulfilled;
+    const config = await interceptor?.({ headers: new AxiosHeaders() });
+
+    expect(config?.headers.Authorization).toBe('Bearer token-123');
   });
 });

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option csharp_namespace = "ECommerce.Shared.Protos";
+
+package customeraddress;
+
+service CustomerAddressValidation {
+  rpc ValidateAddress (ValidateCustomerAddressRequest) returns (ValidateCustomerAddressReply);
+}
+
+message ValidateCustomerAddressRequest {
+  string customer_id = 1;
+  string address_id = 2;
+}
+
+message ValidateCustomerAddressReply {
+  string customer_id = 1;
+  string address_id = 2;
+  string customer_email = 3;
+  string recipient_name = 4;
+  string label = 5;
+  string street = 6;
+  string number = 7;
+  string complement = 8;
+  string neighborhood = 9;
+  string city = 10;
+  string state = 11;
+  string zip_code = 12;
+  string country = 13;
+  string reference = 14;
+  string formatted_address = 15;
+}

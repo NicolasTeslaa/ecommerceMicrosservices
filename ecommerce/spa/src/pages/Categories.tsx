@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { useCategories, useProducts } from '@/hooks/useData';
+import { useQueries } from '@tanstack/react-query';
+import { useCategories } from '@/hooks/useData';
+import { productService } from '@/services/backendApi';
 import { hashString } from '@/utils/format';
 
 const fadeUp = {
@@ -12,10 +14,20 @@ const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
 const Categories = () => {
   const { data: categories, isLoading } = useCategories();
-  const { data: products } = useProducts();
+  const categoryCountQueries = useQueries({
+    queries: (categories ?? []).map((category) => ({
+      queryKey: ['category-product-count', category.id],
+      queryFn: async () => {
+        const result = await productService.getPage(1, 1, { categoryId: category.id });
+        return result.pagination?.totalItems ?? 0;
+      },
+      enabled: !!categories?.length,
+      staleTime: 60_000,
+    })),
+  });
 
-  const countByCategory = (catId: string) =>
-    products?.filter(p => p.categoryId === catId).length || 0;
+  const countByCategory = (index: number) => categoryCountQueries[index]?.data ?? 0;
+  const countsAreLoading = categoryCountQueries.some((query) => query.isLoading);
 
   return (
     <div className="min-h-screen pt-24 lg:pt-28 pb-12 px-4">
@@ -57,7 +69,7 @@ const Categories = () => {
                         )}
                         <div className="flex items-center justify-between mt-6">
                           <span className="text-xs font-mono text-muted-foreground">
-                            {countByCategory(cat.id)} produto{countByCategory(cat.id) !== 1 ? 's' : ''}
+                            {countsAreLoading ? 'Carregando...' : `${countByCategory(i)} produto${countByCategory(i) !== 1 ? 's' : ''}`}
                           </span>
                           <span className="flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                             Explorar <ArrowRight size={12} />

@@ -8,6 +8,20 @@ export const useProducts = () => {
   });
 };
 
+export const usePagedProducts = (
+  pageNumber: number,
+  pageSize: number,
+  filters?: {
+    searchTerm?: string;
+    categoryId?: string | null;
+  }
+) => {
+  return useQuery({
+    queryKey: ['products', 'paged', pageNumber, pageSize, filters?.searchTerm ?? '', filters?.categoryId ?? ''],
+    queryFn: () => productService.getPage(pageNumber, pageSize, filters),
+  });
+};
+
 export const useProduct = (id: string) => {
   return useQuery({
     queryKey: ['product', id],

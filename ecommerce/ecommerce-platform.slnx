@@ -2,12 +2,25 @@
   <Folder Name="/gateway/">
     <Project Path="gateway/ApiGateway/ApiGateway.csproj" />
   </Folder>
-  <Folder Name="/services/ShippingService/" />
+  <Folder Name="/spa/">
+    <Project Path="spa/SpaLauncher/SpaLauncher.csproj" />
+  </Folder>
+  <Folder Name="/services/ShippingService/">
+    <Project Path="services/ShippingService/Shipping.API/Shipping.API.csproj" />
+    <Project Path="services/ShippingService/Shipping.Application/Shipping.Application.csproj" />
+    <Project Path="services/ShippingService/Shipping.Domain/Shipping.Domain.csproj" />
+    <Project Path="services/ShippingService/Shipping.Infrastructure/Shipping.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/ECommerce.Shared/ECommerce.Shared.csproj" />
   </Folder>
   <Folder Name="/services/" />
-  <Folder Name="/services/AuthService/" />
+  <Folder Name="/services/AuthService/">
+    <Project Path="services/AuthService/Auth.API/Auth.API.csproj" />
+    <Project Path="services/AuthService/Auth.Application/Auth.Application.csproj" />
+    <Project Path="services/AuthService/Auth.Domain/Auth.Domain.csproj" />
+    <Project Path="services/AuthService/Auth.Infrastructure/Auth.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/services/CartService/">
     <Project Path="services/CartService/Cart.API/Cart.API.csproj" />
     <Project Path="services/CartService/Cart.Application/Cart.Application.csproj" />
@@ -24,9 +37,22 @@
     <Project Path="services/CatalogService/Catalog.Infrastructure/Catalog.Infrastructure.csproj" Id="a373febd-223f-49ba-b5e3-ba5db885e829" />
     <Project Path="services/CatalogService/Catalog.Tests/Catalog.Tests.csproj" />
   </Folder>
-  <Folder Name="/services/CustomerService/" />
+  <Folder Name="/services/CustomerService/">
+    <Project Path="services/CustomerService/Customer.API/Customer.API.csproj" />
+    <Project Path="services/CustomerService/Customer.Application/Customer.Application.csproj" />
+    <Project Path="services/CustomerService/Customer.Domain/Customer.Domain.csproj" />
+    <Project Path="services/CustomerService/Customer.Infrastructure/Customer.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/services/InventoryService/" />
   <Folder Name="/services/NotificationService/" />
-  <Folder Name="/services/OrderService/" />
+  <Folder Name="/services/OrderService/">
+    <Project Path="services/OrderService/Order.API.Common/Order.API.Common.csproj" />
+    <Project Path="services/OrderService/Order.API.Processor/Order.API.Processor.csproj" />
+    <Project Path="services/OrderService/Order.API.Read/Order.API.Read.csproj" />
+    <Project Path="services/OrderService/Order.API.Write/Order.API.Write.csproj" />
+    <Project Path="services/OrderService/Order.Application/Order.Application.csproj" />
+    <Project Path="services/OrderService/Order.Domain/Order.Domain.csproj" />
+    <Project Path="services/OrderService/Order.Infrastructure/Order.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/services/PaymentService/" />
 </Solution>

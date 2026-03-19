@@ -1,10 +1,5 @@
-﻿using Catalog.Domain.Entities;
-using System;
 using Catalog.Application.ReadModels;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Catalog.Domain.Entities;
 
 namespace Catalog.Application.DTOs;
 
@@ -17,6 +12,11 @@ public class ProductDto
     public int StockQuantity { get; set; }
     public bool Active { get; set; }
     public Guid CategoryId { get; set; }
+    public decimal HeightCm { get; set; }
+    public decimal WidthCm { get; set; }
+    public decimal CubageM3 { get; set; }
+    public decimal WeightKg { get; set; }
+    public string OriginZipCode { get; set; } = string.Empty;
 
     public static ProductDto MapFromEntity(Product product)
     {
@@ -28,7 +28,12 @@ public class ProductDto
             Price = product.Price,
             StockQuantity = product.StockQuantity,
             Active = product.Active,
-            CategoryId = product.CategoryId
+            CategoryId = product.CategoryId,
+            HeightCm = product.HeightCm,
+            WidthCm = product.WidthCm,
+            CubageM3 = product.CubageM3,
+            WeightKg = product.WeightKg,
+            OriginZipCode = product.OriginZipCode
         };
     }
 
@@ -42,7 +47,12 @@ public class ProductDto
             Price = product.Price,
             StockQuantity = product.StockQuantity,
             Active = product.Active,
-            CategoryId = product.CategoryId
+            CategoryId = product.CategoryId,
+            HeightCm = product.HeightCm,
+            WidthCm = product.WidthCm,
+            CubageM3 = product.CubageM3,
+            WeightKg = product.WeightKg,
+            OriginZipCode = product.OriginZipCode
         };
     }
 
@@ -53,7 +63,11 @@ public class ProductDto
             dto.Description,
             dto.Price,
             dto.StockQuantity,
-            dto.CategoryId
-        );
+            dto.CategoryId,
+            dto.HeightCm,
+            dto.WidthCm,
+            dto.CubageM3,
+            dto.WeightKg,
+            dto.OriginZipCode);
     }
 }

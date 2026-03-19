@@ -1,9 +1,18 @@
-import { useState, useMemo } from 'react';
+import { Fragment, useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, SlidersHorizontal } from 'lucide-react';
-import { useProducts, useCategories } from '@/hooks/useData';
+import { usePagedProducts, useCategories } from '@/hooks/useData';
 import ProductCard from '@/components/product/ProductCard';
 import ProductSkeleton from '@/components/product/ProductSkeleton';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -15,20 +24,47 @@ const stagger = {
   show: { transition: { staggerChildren: 0.06 } },
 };
 
+const PRODUCTS_PER_PAGE = 12;
+
+const buildVisiblePages = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, currentPage - 1, currentPage, currentPage + 1, totalPages];
+};
+
 const Catalog = () => {
-  const { data: products, isLoading } = useProducts();
   const { data: categories } = useCategories();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const trimmedSearch = useMemo(() => search.trim(), [search]);
+  const { data: pagedProducts, isLoading, isFetching } = usePagedProducts(currentPage, PRODUCTS_PER_PAGE, {
+    searchTerm: trimmedSearch || undefined,
+    categoryId: selectedCategory,
+  });
 
-  const filtered = useMemo(() => {
-    if (!products) return [];
-    return products.filter(p => {
-      const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
-      const matchCat = !selectedCategory || p.categoryId === selectedCategory;
-      return matchSearch && matchCat;
-    });
-  }, [products, search, selectedCategory]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategory]);
+
+  const products = pagedProducts?.items ?? [];
+  const totalItems = pagedProducts?.pagination?.totalItems ?? 0;
+  const totalPages = Math.max(1, pagedProducts?.pagination?.totalPages ?? 1);
+
+  const visiblePages = useMemo(
+    () => buildVisiblePages(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
 
   return (
     <div className="min-h-screen pt-24 lg:pt-28 pb-12 px-4">
@@ -78,7 +114,7 @@ const Catalog = () => {
 
           {/* Results count */}
           <motion.p variants={fadeUp} className="text-xs text-muted-foreground font-mono mb-6">
-            {filtered.length} produto{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
+            {totalItems} produto{totalItems !== 1 ? 's' : ''} encontrado{totalItems !== 1 ? 's' : ''}
           </motion.p>
 
           {/* Grid */}
@@ -88,7 +124,7 @@ const Catalog = () => {
                 <ProductSkeleton key={i} />
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : products.length === 0 ? (
             <motion.div variants={fadeUp} className="flex flex-col items-center justify-center py-24 text-center">
               <Search size={48} className="text-muted-foreground/30 mb-4" />
               <p className="text-muted-foreground">Nenhum produto encontrado</p>
@@ -97,13 +133,80 @@ const Catalog = () => {
               </button>
             </motion.div>
           ) : (
-            <motion.div variants={stagger} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filtered.map(product => (
-                <motion.div key={product.id} variants={fadeUp}>
-                  <ProductCard product={product} />
+            <>
+              {isFetching && (
+                <motion.p variants={fadeUp} className="mb-4 text-xs font-mono text-muted-foreground">
+                  Atualizando resultados...
+                </motion.p>
+              )}
+              <motion.div variants={stagger} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {products.map(product => (
+                  <motion.div key={product.id} variants={fadeUp}>
+                    <ProductCard product={product} />
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              {totalPages > 1 && (
+                <motion.div variants={fadeUp} className="mt-10 space-y-3">
+                  <p className="text-center text-xs font-mono text-muted-foreground">
+                    Página {currentPage} de {totalPages}
+                  </p>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setCurrentPage((page) => Math.max(1, page - 1));
+                          }}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+
+                      {visiblePages.map((page, index) => {
+                        const previousPage = visiblePages[index - 1];
+                        const shouldShowEllipsis = previousPage && page - previousPage > 1;
+
+                        return (
+                          <Fragment key={page}>
+                            {shouldShowEllipsis && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                            <PaginationItem>
+                              <PaginationLink
+                                href="#"
+                                isActive={page === currentPage}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </Fragment>
+                        );
+                      })}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setCurrentPage((page) => Math.min(totalPages, page + 1));
+                          }}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </motion.div>
-              ))}
-            </motion.div>
+              )}
+            </>
           )}
         </motion.div>
       </div>

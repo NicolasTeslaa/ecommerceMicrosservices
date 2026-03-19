@@ -65,6 +65,11 @@ const mapProductSnapshot = (
     active: previous?.active ?? true,
     categoryId: previous?.categoryId ?? '',
     categoryName: previous?.categoryName,
+    heightCm: previous?.heightCm ?? 10,
+    widthCm: previous?.widthCm ?? 10,
+    cubageM3: previous?.cubageM3 ?? 0.01,
+    weightKg: previous?.weightKg ?? 0.5,
+    originZipCode: previous?.originZipCode ?? '01001-000',
   };
 };
 
@@ -79,6 +84,42 @@ const mapCartItems = (
     quantity: item.quantity,
   }));
 
+const mergeGuestCartIntoUserCart = async (
+  guestId: string,
+  userId: string,
+  currentItems: CartItem[]
+): Promise<CartApiResponse> => {
+  const guestCart = await cartService.getCart('guest', guestId);
+
+  if (guestCart.items.length === 0) {
+    return cartService.getCart('user', userId);
+  }
+
+  let userCart = await cartService.getCart('user', userId);
+
+  for (const guestItem of guestCart.items) {
+    userCart = await cartService.addItem('user', userId, {
+      productId: guestItem.productId,
+      productName: guestItem.productName,
+      unitPrice: guestItem.unitPrice,
+      quantity: guestItem.quantity,
+    });
+  }
+
+  await cartService.clearCart('guest', guestId);
+
+  return {
+    ...userCart,
+    items: userCart.items.map((item) => ({
+      ...item,
+      productName:
+        item.productName ||
+        currentItems.find((currentItem) => currentItem.product.id === item.productId)?.product.name ||
+        item.productName,
+    })),
+  };
+};
+
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
@@ -88,7 +129,11 @@ export const useCart = create<CartState>()(
 
       initializeCart: async () => {
         const owner = getCartOwner(get().guestId);
-        const cart = await cartService.getCart(owner.ownerType, owner.ownerId);
+
+        const cart =
+          owner.ownerType === 'user' && get().guestId
+            ? await mergeGuestCartIntoUserCart(get().guestId, owner.ownerId, get().items)
+            : await cartService.getCart(owner.ownerType, owner.ownerId);
 
         set({
           guestId: owner.guestId,

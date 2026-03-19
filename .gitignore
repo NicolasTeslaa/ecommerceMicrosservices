@@ -52,4 +52,8 @@ docker-compose.override.yml
 
 # Generated
 *.generated.cs
-/ecommerce/services/CatalogService/Catalog.Infrastructure/Persistence/Migrations
+
+# Local tooling / generated migrations
+/.serena/
+**/Migrations/
+**/migrations/

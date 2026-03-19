@@ -1,0 +1,152 @@
+using System.Text.Json;
+using Confluent.Kafka;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Order.Application.DTOs;
+using Order.Application.Interfaces;
+using Order.Domain.Entities;
+using Order.Infrastructure.Persistence;
+
+namespace Order.Infrastructure.Messaging;
+
+public class OrderProcessorConsumerService : BackgroundService
+{
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<OrderProcessorConsumerService> _logger;
+
+    public OrderProcessorConsumerService(
+        IServiceScopeFactory serviceScopeFactory,
+        IConfiguration configuration,
+        ILogger<OrderProcessorConsumerService> logger)
+    {
+        _serviceScopeFactory = serviceScopeFactory;
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await Task.Yield();
+
+        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
+
+        if (string.IsNullOrWhiteSpace(bootstrapServers))
+            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for Order processor.");
+
+        var topic = _configuration["Kafka:OrderProcessingTopic"] ?? "order.processing.requested";
+        var groupId = _configuration["Kafka:OrderProcessingConsumerGroup"] ?? "order-processor";
+
+        using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
+        {
+            BootstrapServers = bootstrapServers,
+            GroupId = groupId,
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            AllowAutoCreateTopics = true,
+            EnableAutoCommit = false
+        }).Build();
+
+        consumer.Subscribe(topic);
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var result = consumer.Consume(stoppingToken);
+
+                if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                    continue;
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                await ProcessMessageAsync(scope.ServiceProvider, result.Message.Value, stoppingToken);
+                consumer.Commit(result);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Unexpected error while consuming order.processing.requested.");
+            }
+        }
+    }
+
+    private async Task ProcessMessageAsync(IServiceProvider serviceProvider, string queuePayload, CancellationToken cancellationToken)
+    {
+        using var document = JsonDocument.Parse(queuePayload);
+
+        if (!document.RootElement.TryGetProperty("OutboxMessageId", out var outboxMessageIdElement))
+            return;
+
+        if (!Guid.TryParse(outboxMessageIdElement.GetString(), out var outboxMessageId))
+            return;
+
+        var writeDbContext = serviceProvider.GetRequiredService<OrderWriteDbContext>();
+        var readModelProjector = serviceProvider.GetRequiredService<IOrderReadModelProjector>();
+        var customerAddressValidationClient = serviceProvider.GetRequiredService<ICustomerAddressValidationClient>();
+        var eventPublisher = serviceProvider.GetRequiredService<IOrderEventPublisher>();
+
+        var outboxMessage = await writeDbContext.OrderProcessingOutboxMessages
+            .FirstOrDefaultAsync(message => message.Id == outboxMessageId, cancellationToken);
+
+        if (outboxMessage is null || outboxMessage.ProcessedAtUtc is not null)
+            return;
+
+        var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(outboxMessage.Payload)
+            ?? throw new InvalidOperationException($"Outbox message '{outboxMessageId}' has an invalid payload.");
+
+        var existingOrder = await writeDbContext.Orders
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.Id == request.OrderId, cancellationToken);
+
+        Order.Domain.Entities.Order order;
+
+        if (existingOrder is null)
+        {
+            var validatedAddress = await customerAddressValidationClient.ValidateAsync(
+                request.CustomerId,
+                request.CustomerAddressId,
+                cancellationToken);
+
+            var items = request.Items
+                .Select(item => new OrderItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity))
+                .ToArray();
+
+            order = new Order.Domain.Entities.Order(
+                request.OrderId,
+                request.CustomerId,
+                request.CustomerAddressId,
+                validatedAddress.CustomerEmail,
+                validatedAddress.FormattedAddress,
+                request.ShippingAmount,
+                request.PaymentMethod,
+                items,
+                request.RequestedAtUtc);
+
+            await writeDbContext.Orders.AddAsync(order, cancellationToken);
+            await writeDbContext.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            order = existingOrder;
+        }
+
+        try
+        {
+            await readModelProjector.ProjectAsync(order, cancellationToken);
+            await eventPublisher.PublishOrderCreatedAsync(order, cancellationToken);
+            outboxMessage.MarkAsProcessed();
+            await writeDbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            outboxMessage.RegisterProcessingFailure(exception.Message);
+            await writeDbContext.SaveChangesAsync(cancellationToken);
+            throw;
+        }
+    }
+}

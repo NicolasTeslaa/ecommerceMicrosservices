@@ -28,7 +28,12 @@ public class ProductsWriteControllerTests
             Description = "Notebook gamer",
             Price = 4500m,
             StockQuantity = 10,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = 10m,
+            WidthCm = 20m,
+            CubageM3 = 0.0100m,
+            WeightKg = 1.250m,
+            OriginZipCode = "01001-000"
         };
 
         _mediatorMock
@@ -53,10 +58,15 @@ public class ProductsWriteControllerTests
         var command = new UpdateProductCommand
         {
             Name = "Teclado",
-            Description = "Teclado mec√¢nico",
+            Description = "Teclado mec‚nico",
             Price = 350m,
             StockQuantity = 12,
-            CategoryId = Guid.NewGuid()
+            CategoryId = Guid.NewGuid(),
+            HeightCm = 5m,
+            WidthCm = 15m,
+            CubageM3 = 0.0050m,
+            WeightKg = 0.850m,
+            OriginZipCode = "01001-000"
         };
 
         _mediatorMock

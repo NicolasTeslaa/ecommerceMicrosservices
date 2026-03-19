@@ -5,6 +5,12 @@ namespace Catalog.Tests.Domain.Entities;
 
 public class ProductTests
 {
+    private const decimal HeightCm = 10m;
+    private const decimal WidthCm = 20m;
+    private const decimal CubageM3 = 0.0100m;
+    private const decimal WeightKg = 1.250m;
+    private const string OriginZipCode = "01001-000";
+
     [Fact]
     public void Constructor_ShouldCreateProduct_WhenDataIsValid()
     {
@@ -17,7 +23,12 @@ public class ProductTests
             " Produto de teste ",
             3500m,
             10,
-            categoryId);
+            categoryId,
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.NotEqual(Guid.Empty, product.Id);
@@ -41,7 +52,12 @@ public class ProductTests
             null!,
             100m,
             5,
-            categoryId);
+            categoryId,
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Equal(string.Empty, product.Description);
@@ -56,7 +72,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidProductNameException>(act);
@@ -71,7 +92,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidProductNameException>(act);
@@ -86,7 +112,12 @@ public class ProductTests
             "Descrição",
             0m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidProductPriceException>(act);
@@ -101,7 +132,12 @@ public class ProductTests
             "Descrição",
             -10m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidProductPriceException>(act);
@@ -116,7 +152,12 @@ public class ProductTests
             "Descrição",
             100m,
             0,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidStockQuantityException>(act);
@@ -131,7 +172,12 @@ public class ProductTests
             "Descrição",
             100m,
             -1,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidStockQuantityException>(act);
@@ -146,7 +192,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.Empty);
+            Guid.Empty,
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidCategoryIdException>(act);
@@ -161,7 +212,12 @@ public class ProductTests
             "Descrição antiga",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         var newCategoryId = Guid.NewGuid();
 
@@ -171,7 +227,12 @@ public class ProductTests
             " Nova descrição ",
             250m,
             20,
-            newCategoryId);
+            newCategoryId,
+            15m,
+            25m,
+            0.0150m,
+            1.750m,
+            "20040-002");
 
         // Assert
         Assert.Equal("Produto novo", product.Name);
@@ -179,6 +240,11 @@ public class ProductTests
         Assert.Equal(250m, product.Price);
         Assert.Equal(20, product.StockQuantity);
         Assert.Equal(newCategoryId, product.CategoryId);
+        Assert.Equal(15m, product.HeightCm);
+        Assert.Equal(25m, product.WidthCm);
+        Assert.Equal(0.0150m, product.CubageM3);
+        Assert.Equal(1.750m, product.WeightKg);
+        Assert.Equal("20040-002", product.OriginZipCode);
         Assert.True(product.Active);
     }
 
@@ -191,7 +257,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Act
         product.Update(
@@ -199,7 +270,12 @@ public class ProductTests
             null!,
             200m,
             10,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Equal(string.Empty, product.Description);
@@ -214,7 +290,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Act
         var act = () => product.Update(
@@ -222,7 +303,12 @@ public class ProductTests
             "Nova descrição",
             200m,
             10,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidProductNameException>(act);
@@ -237,7 +323,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Act
         var act = () => product.Update(
@@ -245,7 +336,12 @@ public class ProductTests
             "Nova descrição",
             0m,
             10,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidProductPriceException>(act);
@@ -260,7 +356,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Act
         var act = () => product.Update(
@@ -268,7 +369,12 @@ public class ProductTests
             "Nova descrição",
             200m,
             0,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidStockQuantityException>(act);
@@ -283,7 +389,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Act
         var act = () => product.Update(
@@ -291,7 +402,12 @@ public class ProductTests
             "Nova descrição",
             200m,
             10,
-            Guid.Empty);
+            Guid.Empty,
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Assert
         Assert.Throws<InvalidCategoryIdException>(act);
@@ -306,7 +422,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         // Act
         product.Deactivate();
@@ -324,7 +445,12 @@ public class ProductTests
             "Descrição",
             100m,
             5,
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            HeightCm,
+            WidthCm,
+            CubageM3,
+            WeightKg,
+            OriginZipCode);
 
         product.Deactivate();
 

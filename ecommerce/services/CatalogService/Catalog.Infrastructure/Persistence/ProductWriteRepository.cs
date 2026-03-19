@@ -24,6 +24,43 @@ public class ProductWriteRepository : IProductWriteRepository
         }
     }
 
+    public async Task<Product?> FindEquivalentActiveAsync(
+        string name,
+        string description,
+        decimal price,
+        Guid categoryId,
+        decimal heightCm,
+        decimal widthCm,
+        decimal cubageM3,
+        decimal weightKg,
+        string originZipCode,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedName = name.Trim();
+            var normalizedDescription = description?.Trim() ?? string.Empty;
+            var normalizedOriginZipCode = originZipCode.Trim();
+
+            return await _context.Products.FirstOrDefaultAsync(
+                product => product.Active
+                    && product.Name == normalizedName
+                    && product.Description == normalizedDescription
+                    && product.Price == price
+                    && product.CategoryId == categoryId
+                    && product.HeightCm == heightCm
+                    && product.WidthCm == widthCm
+                    && product.CubageM3 == cubageM3
+                    && product.WeightKg == weightKg
+                    && product.OriginZipCode == normalizedOriginZipCode,
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            throw new PersistenceException("Failed to search for an equivalent product.", exception);
+        }
+    }
+
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         try

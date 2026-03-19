@@ -9,4 +9,9 @@ public class ProductReadModel
     public int StockQuantity { get; set; }
     public bool Active { get; set; }
     public Guid CategoryId { get; set; }
+    public decimal HeightCm { get; set; }
+    public decimal WidthCm { get; set; }
+    public decimal CubageM3 { get; set; }
+    public decimal WeightKg { get; set; }
+    public string OriginZipCode { get; set; } = string.Empty;
 }

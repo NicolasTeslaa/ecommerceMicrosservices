@@ -10,6 +10,11 @@ public enum CatalogErrorCode
     InvalidStockQuantity = 1004,
     InvalidCategoryId = 1005,
     InvalidCategoryName = 1006,
+    InvalidProductHeight = 1007,
+    InvalidProductWidth = 1008,
+    InvalidProductCubage = 1009,
+    InvalidProductWeight = 1010,
+    InvalidProductOriginZipCode = 1011,
     ProductNotFound = 2001,
     CategoryNotFound = 2002,
     PersistenceFailure = 3001

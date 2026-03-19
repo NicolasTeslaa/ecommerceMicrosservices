@@ -36,10 +36,10 @@ const Confirmation = () => {
             <CheckCircle size={40} className="text-emerald-500" />
           </motion.div>
           <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight mb-2">
-            Pedido Confirmado!
+            Pedido Recebido!
           </h1>
           <p className="text-muted-foreground">
-            Seu pagamento foi processado com sucesso
+            Seu pedido sera processado em instantes e voce sera notificado apos a conclusao
           </p>
         </motion.div>
 
@@ -89,7 +89,7 @@ const Confirmation = () => {
           </div>
 
           <div className="border-t border-border pt-4 flex justify-between items-center">
-            <span className="font-medium">Total Pago</span>
+            <span className="font-medium">Total do Pedido</span>
             <span className="text-2xl font-display font-bold text-gradient-primary">
               {formatCurrency(lastOrder.total)}
             </span>

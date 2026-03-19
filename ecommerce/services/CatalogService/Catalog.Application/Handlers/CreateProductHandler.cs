@@ -32,12 +32,37 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Guid>
         if (category is null)
             throw new CategoryNotFoundException(request.CategoryId);
 
+        var equivalentProduct = await _repository.FindEquivalentActiveAsync(
+            request.Name,
+            request.Description,
+            request.Price,
+            request.CategoryId,
+            request.HeightCm,
+            request.WidthCm,
+            request.CubageM3,
+            request.WeightKg,
+            request.OriginZipCode,
+            cancellationToken);
+
+        if (equivalentProduct is not null)
+        {
+            equivalentProduct.IncreaseStock(request.StockQuantity);
+            await _repository.UpdateAsync(equivalentProduct, cancellationToken);
+            await _projector.UpsertAsync(equivalentProduct, cancellationToken);
+            return equivalentProduct.Id;
+        }
+
         var product = new Product(
             request.Name,
             request.Description,
             request.Price,
             request.StockQuantity,
-            request.CategoryId);
+            request.CategoryId,
+            request.HeightCm,
+            request.WidthCm,
+            request.CubageM3,
+            request.WeightKg,
+            request.OriginZipCode);
 
         await _repository.AddAsync(product, cancellationToken);
         await _projector.UpsertAsync(product, cancellationToken);

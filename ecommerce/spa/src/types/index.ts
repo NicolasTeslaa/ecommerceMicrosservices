@@ -18,6 +18,11 @@ export interface PaginationMetadata {
   totalPages: number;
 }
 
+export interface PagedData<T> {
+  items: T[];
+  pagination?: PaginationMetadata;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -27,6 +32,11 @@ export interface Product {
   active: boolean;
   categoryId: string;
   categoryName?: string;
+  heightCm: number;
+  widthCm: number;
+  cubageM3: number;
+  weightKg: number;
+  originZipCode: string;
 }
 
 export interface Category {
@@ -65,20 +75,92 @@ export interface CartApiResponse {
 
 export interface User {
   id: string;
+  customerId?: string;
   name: string;
   email: string;
 }
 
-export interface CheckoutData {
+export interface AuthApiResponse {
+  userId: string;
+  customerId: string;
   fullName: string;
   email: string;
-  address: string;
-  city: string;
+  accessToken: string;
+  expiresAtUtc: string;
+}
+
+export interface CheckoutData {
   zipCode: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  country: string;
+  reference: string;
+  label: string;
+  recipientName: string;
   paymentMethod: 'credit' | 'debit' | 'pix';
   cardNumber?: string;
   cardExpiry?: string;
   cardCvv?: string;
+}
+
+export interface CustomerAddress {
+  id: string;
+  customerId: string;
+  label: string;
+  recipientName: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  reference: string;
+  isDefault: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface ShippingQuote {
+  provider: string;
+  amount: number;
+  estimatedDays: number;
+  estimatedDeliveryDescription: string;
+}
+
+export interface CreateOrderPayload {
+  customerId: string;
+  customerAddressId: string;
+  shippingAmount: number;
+  paymentMethod: string;
+  items: Array<{
+    productId: string;
+    productName: string;
+    unitPrice: number;
+    quantity: number;
+  }>;
+}
+
+export interface OrderApiResponse {
+  orderId: string;
+  status: string;
+  message: string;
+  requestedAtUtc: string;
+}
+
+export interface ViaCepResponse {
+  cep?: string;
+  logradouro?: string;
+  complemento?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+  erro?: boolean;
 }
 
 export interface OrderConfirmation {
@@ -88,4 +170,6 @@ export interface OrderConfirmation {
   paymentMethod: string;
   status: 'approved' | 'pending';
   date: string;
+  shippingAmount?: number;
+  shippingAddress?: string;
 }
