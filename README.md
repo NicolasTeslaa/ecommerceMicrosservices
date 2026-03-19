@@ -1,183 +1,177 @@
 # E-commerce Microservices
 
-Projeto de estudo/evolução de uma plataforma de e-commerce baseada em microserviços com foco atual no `CatalogService`.
+Projeto de estudo e evolucao de uma plataforma de e-commerce orientada a microservicos, com foco em separacao de responsabilidades, contratos compartilhados e comunicacao entre servicos.
 
-## Estrutura
+O repositorio ja cobre o fluxo principal de compra de ponta a ponta: autenticacao, catalogo, carrinho, enderecos do cliente, cotacao de frete, criacao de pedido, consulta de pedidos e aplicacao web consumindo tudo por um gateway unico.
 
-O repositório está organizado assim:
+## O que o projeto abrange
 
-```text
-ecommerce/
-  gateway/
-    ApiGateway/
-  services/
-    CatalogService/
-      Catalog.API.Common/
-      Catalog.API.Read/
-      Catalog.API.Write/
-      Catalog.Application/
-      Catalog.Domain/
-      Catalog.Infrastructure/
-      Catalog.Tests/
-  shared/
-    ECommerce.Shared/
-```
+O ecossistema esta organizado em quatro frentes:
 
-## Estado atual
+- `gateway/ApiGateway`: ponto unico de entrada para as APIs.
+- `services/*`: microservicos independentes por dominio de negocio.
+- `shared/ECommerce.Shared`: contratos HTTP, eventos de integracao e artefatos compartilhados.
+- `spa/`: storefront web em React para navegacao, autenticacao e checkout.
 
-Hoje o serviço mais evoluído do repositório é o `CatalogService`.
+## Dominios implementados
 
-Ele já está seguindo uma abordagem de `CQRS`, com separação entre leitura e escrita:
+### Catalogo
 
-- `Catalog.API.Read`: expõe endpoints de consulta
-- `Catalog.API.Write`: expõe endpoints de comando
-- `Catalog.Application`: handlers, DTOs, queries, commands e contratos
-- `Catalog.Domain`: entidades e regras de domínio
-- `Catalog.Infrastructure`: persistência, repositories, db contexts e projeções
-- `Catalog.API.Common`: middleware e composição compartilhada entre os hosts da API
-- `ECommerce.Shared`: contratos compartilhados entre microserviços
+O `CatalogService` e o servico mais maduro da solucao e segue uma abordagem `CQRS`, com separacao entre leitura e escrita:
 
-## CatalogService
+- `Catalog.API.Read`: consultas de produtos e categorias.
+- `Catalog.API.Write`: comandos de criacao, alteracao e exclusao.
+- `Catalog.Application`: handlers, DTOs, commands, queries e contratos.
+- `Catalog.Domain`: entidades e regras de negocio.
+- `Catalog.Infrastructure`: persistencia, repositorios e projecoes.
+- `Catalog.API.Common`: middleware e composicao compartilhada entre os hosts do servico.
 
-### APIs
+Funcionalidades atuais do catalogo:
 
-O `CatalogService` foi separado em duas APIs para permitir escalabilidade independente:
+- cadastro, atualizacao e remocao de produtos;
+- cadastro, atualizacao e remocao de categorias;
+- listagem paginada de produtos e categorias;
+- consulta por identificador;
+- filtros de busca no catalogo;
+- modelo de leitura separado do modelo transacional;
+- validacoes de negocio para garantir integridade entre produto e categoria;
+- atributos logisticos no produto, como peso, largura, altura, cubagem e CEP de origem, usados pelo checkout e pelo frete.
 
-- leitura: `Catalog.API.Read`
-- escrita: `Catalog.API.Write`
+### Autenticacao e identidade
 
-Essa separação permite, por exemplo:
+O `AuthService` centraliza o ciclo de autenticacao da plataforma:
 
-- subir mais instâncias de leitura quando houver muito tráfego de consulta
-- manter o lado de escrita mais controlado
-- evoluir o modelo de leitura sem acoplar ao modelo de domínio
+- registro de usuario;
+- login;
+- endpoint de perfil autenticado (`me`);
+- emissao e validacao de `JWT`;
+- publicacao de evento de usuario registrado;
+- uso de outbox para comunicacao assincrona.
 
-### Bancos
+Esse servico ja participa do fluxo distribuido da plataforma e fornece os dados de identidade que o frontend usa para sessao e checkout autenticado.
 
-O catálogo trabalha com dois bancos lógicos:
+### Clientes e enderecos
 
-- `catalog-write`: banco de escrita, fonte da verdade
-- `catalog-read`: banco de leitura, usado pelos endpoints de consulta
+O `CustomerService` concentra os dados cadastrais do cliente e a gestao de enderecos:
 
-No momento, `Products` e `Categories` já seguem essa estratégia.
+- consulta de cliente por id;
+- listagem de enderecos;
+- consulta de endereco especifico;
+- cadastro e atualizacao de endereco;
+- remocao de endereco;
+- definicao de endereco padrao.
 
-### Fluxo de escrita e leitura
+O servico tambem expoe um endpoint `gRPC` de validacao de endereco, consumido pelo fluxo de pedidos para confirmar que o endereco informado pertence ao cliente antes da persistencia final.
 
-Para `Product` e `Category`, o fluxo atual é:
+### Carrinho
 
-1. a API de escrita recebe o comando
-2. o handler grava no banco de escrita
-3. uma projeção atualiza o banco de leitura
-4. a API de leitura consulta apenas o banco de leitura
+O `CartService` cobre o carrinho de compras e suporta operacoes de:
 
-Observação:
-hoje a projeção para o banco de leitura é síncrona no fluxo da aplicação. O próximo passo arquitetural recomendado é evoluir isso para `Outbox + Background Worker`.
+- consulta do carrinho;
+- inclusao de item;
+- alteracao de quantidade;
+- remocao de item;
+- limpeza total do carrinho.
 
-### Regra de negócio implementada
+O modelo atual considera dono do carrinho por tipo e identificador, abrindo espaco para cenarios de usuario autenticado e outros perfis de posse.
 
-Ao criar ou atualizar um produto, o `CategoryId` precisa existir.
+### Frete
 
-Ou seja:
+O `ShippingService` oferece a cotacao de frete a partir de dados fisicos e logisticos do pedido:
 
-- não é permitido criar produto com `CategoryId` vazio
-- não é permitido criar ou atualizar produto apontando para uma categoria inexistente
+- peso;
+- largura;
+- cubagem;
+- CEP de origem;
+- CEP de destino;
+- provedor de frete.
 
-## Resposta HTTP compartilhada
+Esse servico ja esta integrado ao checkout da SPA e participa da composicao do valor final da compra.
 
-Foi criada uma class library compartilhada em `ecommerce/shared/ECommerce.Shared`.
+### Pedidos
 
-Ela centraliza:
+O `OrderService` foi estruturado com separacao entre leitura, escrita e processamento:
 
-- `ApiResponse<T>`
-- `ApiError`
-- `PaginationRequest`
-- `PaginationMetadata`
-- `PagedResult<T>`
+- `Order.API.Write`: recebe a solicitacao de criacao do pedido;
+- `Order.API.Read`: consulta pedido por id e lista pedidos por cliente;
+- `Order.API.Processor`: hospeda o processamento interno do pipeline assincrono;
+- `Order.API.Common`, `Order.Application`, `Order.Domain` e `Order.Infrastructure`: camadas de aplicacao, dominio e infraestrutura.
 
-Isso permite padronizar os contratos HTTP entre os microserviços.
+Capacidades ja presentes:
 
-## Paginação
+- recebimento de pedido com resposta `Accepted`;
+- processamento assincrono com background service;
+- validacao do endereco do cliente via `gRPC`;
+- projecao para modelo de leitura;
+- publicacao de evento de pedido criado;
+- outbox para orquestrar o processamento interno.
 
-Os endpoints `GetAll` de produtos e categorias já suportam paginação.
+## Comunicacao entre servicos
 
-Parâmetros:
+O projeto ja contempla mais de um estilo de integracao distribuida:
 
-- `PageNumber`
-- `PageSize`
+- `HTTP` para APIs expostas ao gateway e ao frontend;
+- `gRPC` para validacao interna de endereco entre pedidos e clientes;
+- eventos de integracao compartilhados em `ECommerce.Shared/Messaging`;
+- uso de `Kafka` e outbox em partes do fluxo assincrono.
 
-Os metadados de paginação retornam:
+Entre os contratos compartilhados atuais estao:
 
-- `PageNumber`
-- `PageSize`
-- `TotalItems`
-- `TotalPages`
-- `HasPreviousPage`
-- `HasNextPage`
+- `ApiResponse<T>` e `ApiError`;
+- estruturas de paginacao;
+- `UserRegisteredIntegrationEvent`;
+- `OrderCreatedIntegrationEvent`;
+- contrato `protobuf` para validacao de endereco do cliente.
 
-Os endpoints `GetById` também retornam `ApiResponse` com metadado de paginação de item único para manter consistência de contrato.
+## Gateway e composicao da plataforma
 
-## Gateway
+O `ApiGateway` concentra as rotas publicas da solucao e encaminha chamadas para:
 
-O `ApiGateway` está configurado para rotear:
+- catalogo de leitura e escrita;
+- autenticacao;
+- carrinho;
+- clientes;
+- frete;
+- pedidos de leitura e escrita;
+- rota preparada para pagamentos.
 
-- requisições de leitura para `Catalog.API.Read`
-- requisições de escrita para `Catalog.API.Write`
+Essa composicao permite que a SPA consuma a plataforma como uma experiencia unica, mesmo com os dominios separados em servicos independentes.
 
-## Migrations
+## SPA e experiencia do usuario
 
-Como o `CatalogService` possui dois `DbContext`, as migrations devem ser geradas e aplicadas separadamente.
+A aplicacao web em `ecommerce/spa` funciona como vitrine e camada de orquestracao da jornada do usuario. Hoje ela abrange:
 
-### Criar migration do banco de escrita
+- home e navegacao principal;
+- catalogo de produtos;
+- navegacao por categorias;
+- detalhe de produto;
+- autenticacao com login e cadastro;
+- carrinho com drawer e pagina dedicada;
+- checkout autenticado;
+- consulta de CEP via ViaCEP para pre-preenchimento de endereco;
+- calculo de frete durante a finalizacao;
+- criacao de pedido;
+- pagina de confirmacao.
 
-```powershell
-dotnet ef migrations add InitialCatalogWrite `
-  --context CatalogWriteDbContext `
-  --project .\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj `
-  --startup-project .\ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj `
-  --output-dir Persistence\Migrations\Write
-```
+No frontend, o estado do usuario, do carrinho e do ultimo pedido e mantido em stores dedicadas, integradas ao backend por uma camada unica de servicos.
 
-### Criar migration do banco de leitura
+## Qualidade e organizacao
 
-```powershell
-dotnet ef migrations add InitialCatalogRead `
-  --context CatalogReadDbContext `
-  --project .\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj `
-  --startup-project .\ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj `
-  --output-dir Persistence\Migrations\Read
-```
+O repositorio tambem contempla preocupacoes de engenharia importantes para uma arquitetura distribuida:
 
-### Aplicar migration no banco de escrita
+- padronizacao de resposta HTTP entre servicos;
+- separacao por camadas (`API`, `Application`, `Domain`, `Infrastructure`);
+- testes automatizados em servicos ja mais evoluidos, como catalogo e carrinho;
+- estrutura preparada para expansao de novos dominios.
 
-```powershell
-dotnet ef database update `
-  --context CatalogWriteDbContext `
-  --project .\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj `
-  --startup-project .\ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj
-```
+## Escopo em expansao
 
-### Aplicar migration no banco de leitura
+Ja existem pastas reservadas para a evolucao de outros dominios do e-commerce, como:
 
-```powershell
-dotnet ef database update `
-  --context CatalogReadDbContext `
-  --project .\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj `
-  --startup-project .\ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj
-```
+- `PaymentService`;
+- `InventoryService`;
+- `NotificationService`;
+- `NotaFiscalService`;
+- `ExpeditionService`.
 
-## Testes
-
-O repositório possui testes no `Catalog.Tests`, cobrindo principalmente:
-
-- handlers de commands e queries
-- controllers de leitura e escrita
-- contratos compartilhados de paginação
-- regras de negócio de categoria em produto
-
-## Próximos passos recomendados
-
-- implementar `Outbox` no `CatalogService`
-- adicionar worker para projeção assíncrona do banco de leitura
-- aplicar `ECommerce.Shared` aos outros microserviços
-- evoluir observabilidade e health checks
-- documentar como subir os serviços localmente via Docker ou compose, se esse for o caminho adotado
+Esses modulos sinalizam a intencao do projeto de cobrir a cadeia completa de operacao de um e-commerce moderno, indo alem da vitrine e do checkout.
