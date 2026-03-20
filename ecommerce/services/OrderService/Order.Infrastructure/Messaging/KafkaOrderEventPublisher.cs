@@ -23,7 +23,7 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
         if (string.IsNullOrWhiteSpace(bootstrapServers))
             throw new InvalidOperationException("Kafka:BootstrapServers was not configured for OrderService.");
 
-        var topic = _configuration["Kafka:OrderPendingTopic"] ?? "order.pending";
+        var topic = _configuration["Kafka:OrderPendingPaymentTopic"] ?? "order.pending-payment";
         var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
 
         var integrationEvent = new OrderCreatedIntegrationEvent

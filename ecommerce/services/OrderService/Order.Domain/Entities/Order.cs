@@ -210,6 +210,7 @@ public class Order
             throw new InvalidPaymentMethodException();
 
         var requiresCardToken = paymentMethod is PaymentMethod.Credit or PaymentMethod.Debit;
+        var normalizedCardLast4 = paymentCardLast4?.Trim();
 
         if (requiresCardToken && string.IsNullOrWhiteSpace(paymentToken))
             throw new InvalidPaymentTokenException();
@@ -217,7 +218,7 @@ public class Order
         if (requiresCardToken && (string.IsNullOrWhiteSpace(paymentCardBrand) || string.IsNullOrWhiteSpace(paymentCardLast4)))
             throw new InvalidPaymentCardDataException();
 
-        if (requiresCardToken && (paymentCardLast4?.Trim().Length != 4 || paymentCardLast4.Any(character => !char.IsDigit(character))))
+        if (requiresCardToken && (normalizedCardLast4?.Length != 4 || normalizedCardLast4.Any(character => !char.IsDigit(character))))
             throw new InvalidPaymentCardDataException();
 
         if (items.Count == 0)

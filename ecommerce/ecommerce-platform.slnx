@@ -53,6 +53,7 @@
     <Project Path="services/OrderService/Order.Application/Order.Application.csproj" />
     <Project Path="services/OrderService/Order.Domain/Order.Domain.csproj" />
     <Project Path="services/OrderService/Order.Infrastructure/Order.Infrastructure.csproj" />
+    <Project Path="services/OrderService/Order.Tests/Order.Tests.csproj" />
   </Folder>
   <Folder Name="/services/PaymentService/" />
 </Solution>
