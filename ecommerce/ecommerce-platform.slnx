@@ -20,6 +20,7 @@
     <Project Path="services/AuthService/Auth.Application/Auth.Application.csproj" />
     <Project Path="services/AuthService/Auth.Domain/Auth.Domain.csproj" />
     <Project Path="services/AuthService/Auth.Infrastructure/Auth.Infrastructure.csproj" />
+    <Project Path="services/AuthService/Auth.Tests/Auth.Tests.csproj" />
   </Folder>
   <Folder Name="/services/CartService/">
     <Project Path="services/CartService/Cart.API/Cart.API.csproj" />
