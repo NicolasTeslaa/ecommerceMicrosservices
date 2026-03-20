@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderCheckoutService, OrderCheckoutService>();
         services.AddScoped<IOrderProcessingQueuePublisher, KafkaOrderProcessingQueuePublisher>();
         services.AddScoped<ICustomerAddressValidationClient, CustomerAddressValidationGrpcClient>();
+        services.AddScoped<ICatalogProductAvailabilityClient, CatalogProductAvailabilityGrpcClient>();
 
         if (enableOutboxDispatcher)
             services.AddHostedService<OrderOutboxDispatcherService>();
@@ -47,6 +48,11 @@ public static class DependencyInjection
         services.AddGrpcClient<CustomerAddressValidation.CustomerAddressValidationClient>(options =>
         {
             options.Address = new Uri(configuration["CustomerService:BaseUrl"] ?? "https://localhost:5107");
+        });
+
+        services.AddGrpcClient<CatalogProductAvailability.CatalogProductAvailabilityClient>(options =>
+        {
+            options.Address = new Uri(configuration["CatalogService:BaseUrl"] ?? "https://localhost:5101");
         });
 
         return services;

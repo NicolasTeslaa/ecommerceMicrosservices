@@ -10,9 +10,13 @@ public class OrderDto
     public string CustomerEmail { get; set; } = string.Empty;
     public string ShippingAddress { get; set; } = string.Empty;
     public decimal ShippingAmount { get; set; }
-    public string PaymentMethod { get; set; } = string.Empty;
+    public PaymentMethod PaymentMethod { get; set; }
+    public string? PaymentCardBrand { get; set; }
+    public string? PaymentCardLast4 { get; set; }
     public decimal TotalAmount { get; set; }
     public OrderStatus Status { get; set; }
+    public OrderRejectionReason? RejectionReason { get; set; }
+    public string? RejectionDetail { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public IReadOnlyCollection<OrderItemDto> Items { get; set; } = Array.Empty<OrderItemDto>();
 }

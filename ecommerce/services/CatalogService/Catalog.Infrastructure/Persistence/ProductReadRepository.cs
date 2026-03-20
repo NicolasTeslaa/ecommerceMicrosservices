@@ -67,4 +67,22 @@ public class ProductReadRepository : IProductReadRepository
             throw new PersistenceException($"Failed to retrieve product '{id}' from the read database.", exception);
         }
     }
+
+    public async Task<IReadOnlyCollection<ProductReadModel>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (ids.Count == 0)
+                return Array.Empty<ProductReadModel>();
+
+            return await _context.Products
+                .Where(product => ids.Contains(product.Id))
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            throw new PersistenceException("Failed to retrieve products by ids from the read database.", exception);
+        }
+    }
 }

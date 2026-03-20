@@ -10,16 +10,13 @@ namespace Order.Infrastructure.Persistence;
 public class OrderCheckoutService : IOrderCheckoutService
 {
     private readonly OrderWriteDbContext _writeDbContext;
-    private readonly IOrderProcessingQueuePublisher _queuePublisher;
     private readonly IConfiguration _configuration;
 
     public OrderCheckoutService(
         OrderWriteDbContext writeDbContext,
-        IOrderProcessingQueuePublisher queuePublisher,
         IConfiguration configuration)
     {
         _writeDbContext = writeDbContext;
-        _queuePublisher = queuePublisher;
         _configuration = configuration;
     }
 
@@ -34,6 +31,9 @@ public class OrderCheckoutService : IOrderCheckoutService
             CustomerAddressId = request.CustomerAddressId,
             ShippingAmount = request.ShippingAmount,
             PaymentMethod = request.PaymentMethod,
+            PaymentToken = request.PaymentToken,
+            PaymentCardBrand = request.PaymentCardBrand,
+            PaymentCardLast4 = request.PaymentCardLast4,
             RequestedAtUtc = requestedAtUtc,
             Items = request.Items
                 .Select(item => new OrderProcessingItemDto
@@ -57,21 +57,11 @@ public class OrderCheckoutService : IOrderCheckoutService
         await _writeDbContext.OrderProcessingOutboxMessages.AddAsync(outboxMessage, cancellationToken);
         await _writeDbContext.SaveChangesAsync(cancellationToken);
 
-        outboxMessage.MarkDispatchAttempt();
-        var published = await _queuePublisher.TryPublishAsync(outboxMessage.Id, cancellationToken);
-
-        if (published)
-            outboxMessage.MarkAsDispatched();
-        else
-            outboxMessage.RegisterDispatchFailure("Initial dispatch to order.processing.requested failed.");
-
-        await _writeDbContext.SaveChangesAsync(cancellationToken);
-
         return new OrderProcessingAcceptedDto
         {
             OrderId = orderId,
-            Status = "pending",
-            Message = "Pedido recebido. Ele sera processado em instantes e voce sera notificado apos a conclusao.",
+            Status = "pending_payment",
+            Message = "Pedido recebido. O pagamento sera validado antes da confirmacao final.",
             RequestedAtUtc = requestedAtUtc
         };
     }

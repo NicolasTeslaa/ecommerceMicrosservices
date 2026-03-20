@@ -35,8 +35,12 @@ public class OrderReadModelProjector : IOrderReadModelProjector
             ShippingAddress = order.ShippingAddress,
             ShippingAmount = order.ShippingAmount,
             PaymentMethod = order.PaymentMethod,
+            PaymentCardBrand = order.PaymentCardBrand,
+            PaymentCardLast4 = order.PaymentCardLast4,
             TotalAmount = order.TotalAmount,
             Status = order.Status,
+            RejectionReason = order.RejectionReason,
+            RejectionDetail = order.RejectionDetail,
             CreatedAtUtc = order.CreatedAtUtc,
             Items = order.Items
                 .Select(item => new OrderItemReadModel

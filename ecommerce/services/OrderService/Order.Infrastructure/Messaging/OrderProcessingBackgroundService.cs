@@ -171,6 +171,9 @@ public class OrderProcessingBackgroundService : BackgroundService
                     validatedAddress.FormattedAddress,
                     request.ShippingAmount,
                     request.PaymentMethod,
+                    request.PaymentToken,
+                    request.PaymentCardBrand,
+                    request.PaymentCardLast4,
                     items,
                     request.RequestedAtUtc);
 

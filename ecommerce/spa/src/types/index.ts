@@ -137,7 +137,10 @@ export interface CreateOrderPayload {
   customerId: string;
   customerAddressId: string;
   shippingAmount: number;
-  paymentMethod: string;
+  paymentMethod: 'Credit' | 'Debit' | 'Pix';
+  paymentToken?: string;
+  paymentCardBrand?: string;
+  paymentCardLast4?: string;
   items: Array<{
     productId: string;
     productName: string;
@@ -151,6 +154,33 @@ export interface OrderApiResponse {
   status: string;
   message: string;
   requestedAtUtc: string;
+}
+
+export interface OrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+export interface Order {
+  id: string;
+  customerId: string;
+  customerAddressId: string;
+  customerEmail: string;
+  shippingAddress: string;
+  shippingAmount: number;
+  paymentMethod: string;
+  paymentCardBrand?: string;
+  paymentCardLast4?: string;
+  totalAmount: number;
+  status: string | number;
+  rejectionReason?: string | number | null;
+  rejectionDetail?: string | null;
+  createdAtUtc: string;
+  items: OrderItem[];
 }
 
 export interface ViaCepResponse {

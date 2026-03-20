@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using MediatR;
 using Order.Application.DTOs;
+using Order.Domain.Enums;
 
 namespace Order.Application.Commands;
 
@@ -16,8 +17,16 @@ public class CreateOrderCommand : IRequest<OrderProcessingAcceptedDto>
     public decimal ShippingAmount { get; set; }
 
     [Required]
+    public PaymentMethod PaymentMethod { get; set; }
+
+    [MaxLength(200)]
+    public string? PaymentToken { get; set; }
+
     [MaxLength(50)]
-    public string PaymentMethod { get; set; } = string.Empty;
+    public string? PaymentCardBrand { get; set; }
+
+    [MaxLength(4)]
+    public string? PaymentCardLast4 { get; set; }
 
     [MinLength(1)]
     public List<CreateOrderItemRequest> Items { get; set; } = new();

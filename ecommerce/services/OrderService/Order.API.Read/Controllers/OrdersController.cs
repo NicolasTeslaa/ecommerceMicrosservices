@@ -21,13 +21,24 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<ApiResponse<OrderDto>>> GetById(Guid orderId)
     {
         var order = await _mediator.Send(new GetOrderByIdQuery(orderId));
-        return Ok(ApiResponse<OrderDto>.Ok(order, "Order retrieved successfully."));
+        return Ok(ApiResponse<OrderDto>.Ok(order, "Order retrieved successfully.", PaginationMetadata.SingleItem()));
     }
 
     [HttpGet("customers/{customerId:guid}")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<OrderDto>>>> GetByCustomer(Guid customerId)
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<OrderDto>>>> GetByCustomer(
+        Guid customerId,
+        [FromQuery] GetOrdersByCustomerQuery query)
     {
-        var orders = await _mediator.Send(new GetOrdersByCustomerQuery(customerId));
-        return Ok(ApiResponse<IReadOnlyCollection<OrderDto>>.Ok(orders, "Customer orders retrieved successfully."));
+        var result = await _mediator.Send(new GetOrdersByCustomerQuery
+        {
+            CustomerId = customerId,
+            PageNumber = query.PageNumber,
+            PageSize = query.PageSize
+        });
+
+        return Ok(ApiResponse<IReadOnlyCollection<OrderDto>>.Ok(
+            result.Items,
+            "Customer orders retrieved successfully.",
+            result.Pagination));
     }
 }

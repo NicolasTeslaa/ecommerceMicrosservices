@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { productService, categoryService } from '@/services/backendApi';
+import { categoryService, orderService, productService } from '@/services/backendApi';
 
 export const useProducts = () => {
   return useQuery({
@@ -42,5 +42,13 @@ export const useCategory = (id: string) => {
     queryKey: ['category', id],
     queryFn: () => categoryService.getById(id),
     enabled: !!id,
+  });
+};
+
+export const usePagedOrders = (customerId: string, pageNumber: number, pageSize: number) => {
+  return useQuery({
+    queryKey: ['orders', customerId, pageNumber, pageSize],
+    queryFn: () => orderService.getByCustomer(customerId, pageNumber, pageSize),
+    enabled: !!customerId,
   });
 };

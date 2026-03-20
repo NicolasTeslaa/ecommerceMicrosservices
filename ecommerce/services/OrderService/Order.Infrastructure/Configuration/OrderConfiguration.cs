@@ -16,9 +16,13 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order.Domain.Entities
         builder.Property(order => order.CustomerEmail).HasMaxLength(200).IsRequired();
         builder.Property(order => order.ShippingAddress).HasMaxLength(400).IsRequired();
         builder.Property(order => order.ShippingAmount).HasPrecision(18, 2).IsRequired();
-        builder.Property(order => order.PaymentMethod).HasMaxLength(50).IsRequired();
+        builder.Property(order => order.PaymentMethod).IsRequired();
+        builder.Property(order => order.PaymentToken).HasMaxLength(200);
+        builder.Property(order => order.PaymentCardBrand).HasMaxLength(50);
+        builder.Property(order => order.PaymentCardLast4).HasMaxLength(4);
         builder.Property(order => order.TotalAmount).HasPrecision(18, 2).IsRequired();
         builder.Property(order => order.Status).IsRequired();
+        builder.Property(order => order.RejectionDetail).HasMaxLength(500);
         builder.Property(order => order.CreatedAtUtc).IsRequired();
 
         builder.Navigation(order => order.Items)

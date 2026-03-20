@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X, Search } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Search, Package } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/store/useCart';
@@ -58,6 +58,13 @@ const Header = () => {
 
               {isAuthenticated ? (
                 <div className="hidden sm:flex items-center gap-2">
+                  <Link
+                    to="/orders"
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Package size={14} />
+                    <span>Pedidos</span>
+                  </Link>
                   <span className="text-xs text-muted-foreground font-mono">{user?.name}</span>
                   <button onClick={logout} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                     Sair
@@ -120,6 +127,15 @@ const Header = () => {
                 {!isAuthenticated && (
                   <Link to="/login" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary">
                     Entrar
+                  </Link>
+                )}
+                {isAuthenticated && (
+                  <Link
+                    to="/orders"
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  >
+                    Meus Pedidos
                   </Link>
                 )}
               </nav>

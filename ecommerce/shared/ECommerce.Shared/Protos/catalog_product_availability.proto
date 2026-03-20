@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option csharp_namespace = "ECommerce.Shared.Protos";
+
+package catalogproductavailability;
+
+service CatalogProductAvailability {
+  rpc ValidateOrderItems (ValidateOrderItemsRequest) returns (ValidateOrderItemsReply);
+}
+
+message ValidateOrderItemsRequest {
+  repeated ValidateOrderItem items = 1;
+}
+
+message ValidateOrderItem {
+  string product_id = 1;
+  string product_name = 2;
+  int32 requested_quantity = 3;
+}
+
+message ValidateOrderItemsReply {
+  bool is_valid = 1;
+  string reason = 2;
+  repeated RejectedOrderItem rejected_items = 3;
+}
+
+message RejectedOrderItem {
+  string product_id = 1;
+  string product_name = 2;
+  int32 requested_quantity = 3;
+  int32 available_quantity = 4;
+  string reason = 5;
+}

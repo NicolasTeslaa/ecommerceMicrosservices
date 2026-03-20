@@ -7,6 +7,7 @@ import { useAuth } from '@/store/useAuth';
 import { useOrder } from '@/store/useOrder';
 import { customerService, orderService, shippingService, viaCepService } from '@/services/backendApi';
 import { formatCurrency } from '@/utils/format';
+import { tokenizeCardPayment } from '@/utils/payment';
 import type { CheckoutData, CustomerAddress, OrderConfirmation, ShippingQuote } from '@/types';
 import { toast } from 'sonner';
 
@@ -26,6 +27,12 @@ const paymentMethodLabel = (paymentMethod: CheckoutData['paymentMethod']) => {
   if (paymentMethod === 'pix') return 'PIX';
   if (paymentMethod === 'debit') return 'Debito';
   return 'Credito';
+};
+
+const paymentMethodToApi = (paymentMethod: CheckoutData['paymentMethod']) => {
+  if (paymentMethod === 'pix') return 'Pix' as const;
+  if (paymentMethod === 'debit') return 'Debit' as const;
+  return 'Credit' as const;
 };
 
 const Checkout = () => {
@@ -288,11 +295,18 @@ const Checkout = () => {
 
     try {
       const address = await persistAddressIfNeeded();
+      const tokenizedPayment = form.paymentMethod === 'pix'
+        ? {}
+        : await tokenizeCardPayment(form);
+
       const order = await orderService.create({
         customerId,
         customerAddressId: address.id,
         shippingAmount: shippingQuote.amount,
-        paymentMethod: form.paymentMethod,
+        paymentMethod: paymentMethodToApi(form.paymentMethod),
+        paymentToken: tokenizedPayment.paymentToken,
+        paymentCardBrand: tokenizedPayment.paymentCardBrand,
+        paymentCardLast4: tokenizedPayment.paymentCardLast4,
         items: items.map((item) => ({
           productId: item.product.id,
           productName: item.product.name,
@@ -322,6 +336,13 @@ const Checkout = () => {
       } catch {
         toast.error('Nao foi possivel sincronizar a limpeza do carrinho.');
       }
+
+      setForm((prev) => ({
+        ...prev,
+        cardNumber: '',
+        cardExpiry: '',
+        cardCvv: '',
+      }));
 
       navigate('/confirmation');
     } catch (error) {
@@ -511,18 +532,42 @@ const Checkout = () => {
                     <div className="space-y-4 pt-2">
                       <div>
                         <label className="text-xs font-mono text-muted-foreground block mb-1.5">Numero do cartao</label>
-                        <input value={form.cardNumber} onChange={(e) => update('cardNumber', e.target.value)} className={inputClass} placeholder="0000 0000 0000 0000" />
+                        <input
+                          value={form.cardNumber}
+                          onChange={(e) => update('cardNumber', e.target.value.replace(/[^\d\s]/g, '').slice(0, 19))}
+                          className={inputClass}
+                          placeholder="0000 0000 0000 0000"
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs font-mono text-muted-foreground block mb-1.5">Validade</label>
-                          <input value={form.cardExpiry} onChange={(e) => update('cardExpiry', e.target.value)} className={inputClass} placeholder="MM/AA" />
+                          <input
+                            value={form.cardExpiry}
+                            onChange={(e) => {
+                              const normalized = e.target.value.replace(/\D/g, '').slice(0, 4);
+                              const formatted = normalized.length > 2
+                                ? `${normalized.slice(0, 2)}/${normalized.slice(2)}`
+                                : normalized;
+                              update('cardExpiry', formatted);
+                            }}
+                            className={inputClass}
+                            placeholder="MM/AA"
+                          />
                         </div>
                         <div>
                           <label className="text-xs font-mono text-muted-foreground block mb-1.5">CVV</label>
-                          <input value={form.cardCvv} onChange={(e) => update('cardCvv', e.target.value)} className={inputClass} placeholder="123" />
+                          <input
+                            value={form.cardCvv}
+                            onChange={(e) => update('cardCvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            className={inputClass}
+                            placeholder="123"
+                          />
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Os dados do cartao sao tokenizados no navegador antes do envio. O backend recebe apenas token e dados mascarados.
+                      </p>
                     </div>
                   )}
                 </div>

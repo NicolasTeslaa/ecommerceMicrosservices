@@ -15,6 +15,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Checkout from "@/pages/Checkout";
 import Confirmation from "@/pages/Confirmation";
+import Orders from "@/pages/Orders";
 import NotFound from "@/pages/NotFound";
 import { useAuth } from "@/store/useAuth";
 import { useCart } from "@/store/useCart";
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/confirmation" element={<Confirmation />} />
+          <Route path="/orders" element={<Orders />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />

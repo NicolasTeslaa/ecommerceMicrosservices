@@ -7,6 +7,10 @@ public class OrderCreatedIntegrationEvent
     public Guid CustomerAddressId { get; set; }
     public string CustomerEmail { get; set; } = string.Empty;
     public decimal ShippingAmount { get; set; }
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string? PaymentCardBrand { get; set; }
+    public string? PaymentCardLast4 { get; set; }
+    public string? PaymentToken { get; set; }
     public decimal TotalAmount { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }

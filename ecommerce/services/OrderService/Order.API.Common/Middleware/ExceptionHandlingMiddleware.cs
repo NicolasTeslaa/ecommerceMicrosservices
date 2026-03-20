@@ -63,6 +63,8 @@ public class ExceptionHandlingMiddleware
             InvalidCustomerAddressIdException => HttpStatusCode.BadRequest,
             InvalidShippingAddressException => HttpStatusCode.BadRequest,
             InvalidPaymentMethodException => HttpStatusCode.BadRequest,
+            InvalidPaymentTokenException => HttpStatusCode.BadRequest,
+            InvalidPaymentCardDataException => HttpStatusCode.BadRequest,
             InvalidOrderItemException => HttpStatusCode.BadRequest,
             InvalidProductIdException => HttpStatusCode.BadRequest,
             InvalidProductNameException => HttpStatusCode.BadRequest,

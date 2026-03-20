@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Order.Application.DTOs;
 using Order.Application.Interfaces;
 using Order.Domain.Entities;
+using Order.Domain.Enums;
+using Order.Domain.Exceptions;
 using Order.Infrastructure.Persistence;
 
 namespace Order.Infrastructure.Messaging;
@@ -88,6 +90,7 @@ public class OrderProcessorConsumerService : BackgroundService
         var writeDbContext = serviceProvider.GetRequiredService<OrderWriteDbContext>();
         var readModelProjector = serviceProvider.GetRequiredService<IOrderReadModelProjector>();
         var customerAddressValidationClient = serviceProvider.GetRequiredService<ICustomerAddressValidationClient>();
+        var catalogProductAvailabilityClient = serviceProvider.GetRequiredService<ICatalogProductAvailabilityClient>();
         var eventPublisher = serviceProvider.GetRequiredService<IOrderEventPublisher>();
 
         var outboxMessage = await writeDbContext.OrderProcessingOutboxMessages
@@ -99,6 +102,42 @@ public class OrderProcessorConsumerService : BackgroundService
         var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(outboxMessage.Payload)
             ?? throw new InvalidOperationException($"Outbox message '{outboxMessageId}' has an invalid payload.");
 
+        var availabilityResult = await catalogProductAvailabilityClient.ValidateAsync(
+            request.Items
+                .Select(item => new ProductAvailabilityCheckItemDto
+                {
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    RequestedQuantity = item.Quantity
+                })
+                .ToArray(),
+            cancellationToken);
+
+        if (!availabilityResult.IsValid)
+        {
+            var rejectedOrder = CreateRejectedOrderFromAvailability(request, availabilityResult);
+
+            await PersistRejectedOrderAsync(writeDbContext, readModelProjector, rejectedOrder, cancellationToken);
+
+            _logger.LogWarning(
+                "Order '{OrderId}' was rejected before persistence. Reason: {Reason}",
+                request.OrderId,
+                availabilityResult.Reason);
+
+            await eventPublisher.PublishOrderRejectedAsync(
+                request.OrderId,
+                request.CustomerId,
+                request.CustomerAddressId,
+                request.RequestedAtUtc,
+                availabilityResult.Reason,
+                availabilityResult.Issues,
+                cancellationToken);
+
+            outboxMessage.MarkAsProcessed();
+            await writeDbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
         var existingOrder = await writeDbContext.Orders
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.Id == request.OrderId, cancellationToken);
@@ -107,10 +146,33 @@ public class OrderProcessorConsumerService : BackgroundService
 
         if (existingOrder is null)
         {
-            var validatedAddress = await customerAddressValidationClient.ValidateAsync(
-                request.CustomerId,
-                request.CustomerAddressId,
-                cancellationToken);
+            ValidatedCustomerAddressDto validatedAddress;
+
+            try
+            {
+                validatedAddress = await customerAddressValidationClient.ValidateAsync(
+                    request.CustomerId,
+                    request.CustomerAddressId,
+                    cancellationToken);
+            }
+            catch (CustomerAddressNotFoundException exception)
+            {
+                var rejectedOrder = CreateRejectedOrderForAddress(request, exception.Message);
+                await PersistRejectedOrderAsync(writeDbContext, readModelProjector, rejectedOrder, cancellationToken);
+
+                await eventPublisher.PublishOrderRejectedAsync(
+                    request.OrderId,
+                    request.CustomerId,
+                    request.CustomerAddressId,
+                    request.RequestedAtUtc,
+                    exception.Message,
+                    Array.Empty<ProductAvailabilityIssueDto>(),
+                    cancellationToken);
+
+                outboxMessage.MarkAsProcessed();
+                await writeDbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
 
             var items = request.Items
                 .Select(item => new OrderItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity))
@@ -124,6 +186,9 @@ public class OrderProcessorConsumerService : BackgroundService
                 validatedAddress.FormattedAddress,
                 request.ShippingAmount,
                 request.PaymentMethod,
+                request.PaymentToken,
+                request.PaymentCardBrand,
+                request.PaymentCardLast4,
                 items,
                 request.RequestedAtUtc);
 
@@ -148,5 +213,72 @@ public class OrderProcessorConsumerService : BackgroundService
             await writeDbContext.SaveChangesAsync(cancellationToken);
             throw;
         }
+    }
+
+    private static Order.Domain.Entities.Order CreateRejectedOrderFromAvailability(
+        OrderProcessingRequestDto request,
+        ProductAvailabilityValidationResultDto availabilityResult)
+    {
+        var items = request.Items
+            .Select(item => new OrderItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity))
+            .ToArray();
+
+        var rejectionReason = availabilityResult.Issues.Any(issue => issue.Reason.Contains("stock", StringComparison.OrdinalIgnoreCase))
+            ? OrderRejectionReason.InsufficientStock
+            : OrderRejectionReason.ProductUnavailable;
+
+        return Order.Domain.Entities.Order.CreateRejected(
+            request.OrderId,
+            request.CustomerId,
+            request.CustomerAddressId,
+            request.ShippingAmount,
+            request.PaymentMethod,
+            request.PaymentToken,
+            request.PaymentCardBrand,
+            request.PaymentCardLast4,
+            items,
+            request.RequestedAtUtc,
+            rejectionReason,
+            availabilityResult.Reason);
+    }
+
+    private static Order.Domain.Entities.Order CreateRejectedOrderForAddress(OrderProcessingRequestDto request, string reason)
+    {
+        var items = request.Items
+            .Select(item => new OrderItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity))
+            .ToArray();
+
+        return Order.Domain.Entities.Order.CreateRejected(
+            request.OrderId,
+            request.CustomerId,
+            request.CustomerAddressId,
+            request.ShippingAmount,
+            request.PaymentMethod,
+            request.PaymentToken,
+            request.PaymentCardBrand,
+            request.PaymentCardLast4,
+            items,
+            request.RequestedAtUtc,
+            OrderRejectionReason.InvalidCustomerAddress,
+            reason);
+    }
+
+    private static async Task PersistRejectedOrderAsync(
+        OrderWriteDbContext writeDbContext,
+        IOrderReadModelProjector readModelProjector,
+        Order.Domain.Entities.Order rejectedOrder,
+        CancellationToken cancellationToken)
+    {
+        var existingOrder = await writeDbContext.Orders
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.Id == rejectedOrder.Id, cancellationToken);
+
+        if (existingOrder is null)
+        {
+            await writeDbContext.Orders.AddAsync(rejectedOrder, cancellationToken);
+            await writeDbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        await readModelProjector.ProjectAsync(rejectedOrder, cancellationToken);
     }
 }

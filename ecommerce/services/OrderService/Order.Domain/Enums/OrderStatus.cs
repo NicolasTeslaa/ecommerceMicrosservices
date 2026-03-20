@@ -2,7 +2,9 @@ namespace Order.Domain.Enums;
 
 public enum OrderStatus
 {
-    Pending = 1,
+    PendingPayment = 1,
+    Pending = PendingPayment,
     Confirmed = 2,
-    Cancelled = 3
+    Cancelled = 3,
+    PaymentRejected = 4
 }

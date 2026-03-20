@@ -7,6 +7,7 @@ import type {
   Category,
   CreateOrderPayload,
   CustomerAddress,
+  Order,
   PagedData,
   Product,
   ShippingQuote,
@@ -220,6 +221,20 @@ export const orderService = {
   async create(payload: CreateOrderPayload): Promise<OrderApiResponse> {
     const { data } = await backendApi.post<ApiResponse<OrderApiResponse>>('/api/orders', payload);
     return unwrap(data);
+  },
+
+  async getByCustomer(customerId: string, pageNumber = 1, pageSize = 10): Promise<PagedData<Order>> {
+    const { data } = await backendApi.get<ApiResponse<Order[]>>(`/api/orders/customers/${customerId}`, {
+      params: {
+        pageNumber,
+        pageSize,
+      },
+    });
+
+    return {
+      items: unwrap(data),
+      pagination: data.pagination,
+    };
   },
 };
 

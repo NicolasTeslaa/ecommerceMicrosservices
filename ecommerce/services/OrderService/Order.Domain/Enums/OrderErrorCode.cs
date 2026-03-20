@@ -17,5 +17,7 @@ public enum OrderErrorCode
     InvalidQuantity = 12,
     OrderNotFound = 13,
     CustomerAddressNotFound = 14,
-    PersistenceError = 15
+    PersistenceError = 15,
+    InvalidPaymentToken = 16,
+    InvalidPaymentCardData = 17
 }

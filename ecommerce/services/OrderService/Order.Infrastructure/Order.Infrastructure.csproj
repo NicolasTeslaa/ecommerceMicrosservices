@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <Protobuf Include="..\..\..\shared\ECommerce.Shared\Protos\customer_address.proto" GrpcServices="Client" />
+    <Protobuf Include="..\..\..\shared\ECommerce.Shared\Protos\catalog_product_availability.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

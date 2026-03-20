@@ -1,13 +1,18 @@
 using Catalog.Application.Handlers;
+using Catalog.API.Read.Grpc;
 using Catalog.API.Common.Middleware;
 using Catalog.Domain.Enums;
 using Catalog.Infrastructure.Configuration;
 using ECommerce.Shared.Contracts;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddGrpc();
 builder.Services.AddOpenApi();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -44,6 +49,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+app.MapGrpcService<CatalogProductAvailabilityGrpcService>();
 app.MapControllers();
 
 app.Run();

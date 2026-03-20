@@ -7,5 +7,6 @@ namespace Catalog.Application.Interfaces;
 public interface IProductReadRepository
 {
     Task<ProductReadModel?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ProductReadModel>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
     Task<PagedResult<ProductReadModel>> GetAllAsync(GetAllProductsQuery query, CancellationToken cancellationToken = default);
 }
