@@ -42,6 +42,7 @@
     <Project Path="services/CustomerService/Customer.Application/Customer.Application.csproj" />
     <Project Path="services/CustomerService/Customer.Domain/Customer.Domain.csproj" />
     <Project Path="services/CustomerService/Customer.Infrastructure/Customer.Infrastructure.csproj" />
+    <Project Path="services/CustomerService/Customer.Tests/Customer.Tests.csproj" />
   </Folder>
   <Folder Name="/services/InventoryService/" />
   <Folder Name="/services/NotificationService/" />
