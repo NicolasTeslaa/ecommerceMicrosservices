@@ -203,3 +203,25 @@ export interface OrderConfirmation {
   shippingAmount?: number;
   shippingAddress?: string;
 }
+
+export interface PaymentConfig {
+  publishableKey: string;
+}
+
+export interface Payment {
+  id: string;
+  orderId: string;
+  customerId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: 'Card' | 'Pix' | 'Unknown' | string;
+  stripePaymentIntentId?: string | null;
+  stripeClientSecret?: string | null;
+  status: 'Pending' | 'PendingConfirmation' | 'RequiresAction' | 'Approved' | 'Failed' | 'Cancelled' | string;
+  failureReason?: string | null;
+  failureDetail?: string | null;
+  attemptCount: number;
+  maxAttemptsReached: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

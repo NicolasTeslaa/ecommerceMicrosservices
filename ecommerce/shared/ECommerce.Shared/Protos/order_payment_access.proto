@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option csharp_namespace = "ECommerce.Shared.Protos";
+
+package orderpaymentaccess;
+
+service OrderPaymentAccess {
+  rpc ValidateOrderAccess (ValidateOrderAccessRequest) returns (ValidateOrderAccessReply);
+}
+
+message ValidateOrderAccessRequest {
+  string order_id = 1;
+  string customer_id = 2;
+}
+
+message ValidateOrderAccessReply {
+  bool order_exists = 1;
+  bool customer_matches = 2;
+}

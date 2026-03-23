@@ -170,6 +170,20 @@ public class Order
         return order;
     }
 
+    public void MarkConfirmed()
+    {
+        Status = OrderStatus.Confirmed;
+        RejectionReason = null;
+        RejectionDetail = null;
+    }
+
+    public void MarkPaymentRejected(string detail)
+    {
+        Status = OrderStatus.PaymentRejected;
+        RejectionReason = OrderRejectionReason.PaymentDeclined;
+        RejectionDetail = string.IsNullOrWhiteSpace(detail) ? "Payment was rejected." : detail.Trim();
+    }
+
     private static void Validate(
         Guid customerId,
         Guid customerAddressId,

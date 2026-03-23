@@ -7,13 +7,14 @@ REM ========================================
 set DELETE_PREVIOUS_MIGRATIONS=true
 set CLEAN_BUILD_ARTIFACTS=true
 set RETRY_FAILED_EF=true
-set AUTH_MIGRATION=InitialAuth1
-set CART_MIGRATION=InitialCart1
-set CATALOG_WRITE_MIGRATION=InitialCatalogWrite1
-set CATALOG_READ_MIGRATION=InitialCatalogRead1
-set CUSTOMER_MIGRATION=InitialCustomer
-set ORDER_WRITE_MIGRATION=InitialOrderWrite
-set ORDER_READ_MIGRATION=InitialOrderRead
+set AUTH_MIGRATION=InitialAuth2
+set CART_MIGRATION=InitialCart2
+set CATALOG_WRITE_MIGRATION=InitialCatalogWrite2
+set CATALOG_READ_MIGRATION=InitialCatalogRead2
+set CUSTOMER_MIGRATION=InitialCustomer2
+set ORDER_WRITE_MIGRATION=InitialOrderWrite2
+set ORDER_READ_MIGRATION=InitialOrderRead2
+set PAYMENT_MIGRATION=InitialPayment2s
 
 REM ========================================
 REM Move to repository root
@@ -34,6 +35,7 @@ if /I "%DELETE_PREVIOUS_MIGRATIONS%"=="true" (
   if exist ".\ecommerce\services\CatalogService\Catalog.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\CatalogService\Catalog.Infrastructure\Persistence\Migrations"
   if exist ".\ecommerce\services\CustomerService\Customer.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\CustomerService\Customer.Infrastructure\Persistence\Migrations"
   if exist ".\ecommerce\services\OrderService\Order.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\OrderService\Order.Infrastructure\Persistence\Migrations"
+  if exist ".\ecommerce\services\PaymentService\Payment.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\PaymentService\Payment.Infrastructure\Persistence\Migrations"
 )
 
 echo Restoring solution...
@@ -89,6 +91,13 @@ call :run_migration "OrderService read migration" ^
   "%ORDER_READ_MIGRATION%" ^
   "Persistence\Migrations\Read" || goto :fail
 
+call :run_migration "PaymentService migration" ^
+  ".\ecommerce\services\PaymentService\Payment.Infrastructure\Payment.Infrastructure.csproj" ^
+  ".\ecommerce\services\PaymentService\Payment.API\Payment.API.csproj" ^
+  "PaymentDbContext" ^
+  "%PAYMENT_MIGRATION%" ^
+  "Persistence\Migrations" || goto :fail
+
 echo.
 echo All migrations were generated successfully.
 
@@ -126,6 +135,11 @@ call :run_db_update "OrderService read database" ^
   ".\ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj" ^
   ".\ecommerce\services\OrderService\Order.API.Read\Order.API.Read.csproj" ^
   "OrderReadDbContext" || goto :fail
+
+call :run_db_update "PaymentService database" ^
+  ".\ecommerce\services\PaymentService\Payment.Infrastructure\Payment.Infrastructure.csproj" ^
+  ".\ecommerce\services\PaymentService\Payment.API\Payment.API.csproj" ^
+  "PaymentDbContext" || goto :fail
 
 echo.
 echo All migrations were generated and all databases were updated successfully.

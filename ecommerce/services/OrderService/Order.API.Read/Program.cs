@@ -2,6 +2,7 @@ using ECommerce.Shared.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
 using Order.API.Common.Middleware;
+using Order.API.Read.Grpc;
 using Order.Application.Handlers;
 using Order.Domain.Enums;
 using Order.Infrastructure.Configuration;
@@ -11,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddGrpc();
 builder.Services.AddOpenApi();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -45,6 +47,7 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.MapGrpcService<OrderPaymentAccessGrpcService>();
 app.MapControllers();
 
 app.Run();

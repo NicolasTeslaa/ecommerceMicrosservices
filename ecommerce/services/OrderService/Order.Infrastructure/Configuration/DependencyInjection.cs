@@ -43,7 +43,10 @@ public static class DependencyInjection
             services.AddHostedService<OrderOutboxDispatcherService>();
 
         if (enableProcessorConsumer)
+        {
             services.AddHostedService<OrderProcessorConsumerService>();
+            services.AddHostedService<PaymentResultConsumerService>();
+        }
 
         services.AddGrpcClient<CustomerAddressValidation.CustomerAddressValidationClient>(options =>
         {

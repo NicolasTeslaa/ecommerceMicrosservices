@@ -7,6 +7,8 @@ import type {
   Category,
   CreateOrderPayload,
   CustomerAddress,
+  Payment,
+  PaymentConfig,
   Order,
   PagedData,
   Product,
@@ -16,9 +18,10 @@ import type {
 } from '@/types';
 
 export const AUTH_TOKEN_STORAGE_KEY = 'aura-access-token';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5100';
 
 const backendApi = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5100',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -235,6 +238,18 @@ export const orderService = {
       items: unwrap(data),
       pagination: data.pagination,
     };
+  },
+};
+
+export const paymentService = {
+  async getConfig(): Promise<PaymentConfig> {
+    const { data } = await backendApi.get<ApiResponse<PaymentConfig>>('/api/payments/config');
+    return unwrap(data);
+  },
+
+  async getByOrderId(orderId: string): Promise<Payment | null> {
+    const { data } = await backendApi.get<ApiResponse<Payment | null>>(`/api/payments/orders/${orderId}`);
+    return unwrap(data);
   },
 };
 

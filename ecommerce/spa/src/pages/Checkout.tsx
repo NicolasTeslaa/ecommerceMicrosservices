@@ -7,7 +7,6 @@ import { useAuth } from '@/store/useAuth';
 import { useOrder } from '@/store/useOrder';
 import { customerService, orderService, shippingService, viaCepService } from '@/services/backendApi';
 import { formatCurrency } from '@/utils/format';
-import { tokenizeCardPayment } from '@/utils/payment';
 import type { CheckoutData, CustomerAddress, OrderConfirmation, ShippingQuote } from '@/types';
 import { toast } from 'sonner';
 
@@ -286,27 +285,19 @@ const Checkout = () => {
       return;
     }
 
-    if (form.paymentMethod !== 'pix' && (!form.cardNumber || !form.cardExpiry || !form.cardCvv)) {
-      toast.error('Preencha os dados do cartao.');
-      return;
-    }
-
     setLoading(true);
 
     try {
       const address = await persistAddressIfNeeded();
-      const tokenizedPayment = form.paymentMethod === 'pix'
-        ? {}
-        : await tokenizeCardPayment(form);
 
       const order = await orderService.create({
         customerId,
         customerAddressId: address.id,
         shippingAmount: shippingQuote.amount,
         paymentMethod: paymentMethodToApi(form.paymentMethod),
-        paymentToken: tokenizedPayment.paymentToken,
-        paymentCardBrand: tokenizedPayment.paymentCardBrand,
-        paymentCardLast4: tokenizedPayment.paymentCardLast4,
+        paymentToken: form.paymentMethod === 'pix' ? undefined : 'stripe-payment-element',
+        paymentCardBrand: form.paymentMethod === 'pix' ? undefined : 'Stripe',
+        paymentCardLast4: form.paymentMethod === 'pix' ? undefined : '0000',
         items: items.map((item) => ({
           productId: item.product.id,
           productName: item.product.name,
@@ -344,7 +335,7 @@ const Checkout = () => {
         cardCvv: '',
       }));
 
-      navigate('/confirmation');
+      navigate(`/payment/${order.orderId}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel finalizar a compra.');
     } finally {
@@ -510,12 +501,15 @@ const Checkout = () => {
                     {[
                       { val: 'credit' as const, label: 'Credito', icon: CreditCard },
                       { val: 'debit' as const, label: 'Debito', icon: CreditCard },
-                      { val: 'pix' as const, label: 'PIX', icon: QrCode },
+                      { val: 'pix' as const, label: 'PIX', icon: QrCode, disabled: true },
                     ].map((pm) => (
                       <button
                         key={pm.val}
                         type="button"
-                        onClick={() => update('paymentMethod', pm.val)}
+                        onClick={() => {
+                          if (!pm.disabled) update('paymentMethod', pm.val);
+                        }}
+                        disabled={pm.disabled}
                         className={`p-4 rounded-xl border text-sm font-medium flex flex-col items-center gap-2 transition-all ${
                           form.paymentMethod === pm.val
                             ? 'border-primary bg-primary/10 text-primary'
@@ -524,49 +518,15 @@ const Checkout = () => {
                       >
                         <pm.icon size={20} />
                         {pm.label}
+                        {pm.disabled && <span className="text-[10px] font-mono uppercase opacity-70">Em breve</span>}
                       </button>
                     ))}
                   </div>
 
                   {form.paymentMethod !== 'pix' && (
                     <div className="space-y-4 pt-2">
-                      <div>
-                        <label className="text-xs font-mono text-muted-foreground block mb-1.5">Numero do cartao</label>
-                        <input
-                          value={form.cardNumber}
-                          onChange={(e) => update('cardNumber', e.target.value.replace(/[^\d\s]/g, '').slice(0, 19))}
-                          className={inputClass}
-                          placeholder="0000 0000 0000 0000"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-mono text-muted-foreground block mb-1.5">Validade</label>
-                          <input
-                            value={form.cardExpiry}
-                            onChange={(e) => {
-                              const normalized = e.target.value.replace(/\D/g, '').slice(0, 4);
-                              const formatted = normalized.length > 2
-                                ? `${normalized.slice(0, 2)}/${normalized.slice(2)}`
-                                : normalized;
-                              update('cardExpiry', formatted);
-                            }}
-                            className={inputClass}
-                            placeholder="MM/AA"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-mono text-muted-foreground block mb-1.5">CVV</label>
-                          <input
-                            value={form.cardCvv}
-                            onChange={(e) => update('cardCvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            className={inputClass}
-                            placeholder="123"
-                          />
-                        </div>
-                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Os dados do cartao sao tokenizados no navegador antes do envio. O backend recebe apenas token e dados mascarados.
+                        Os dados do cartao serao preenchidos na proxima etapa, usando a interface segura da Stripe.
                       </p>
                     </div>
                   )}

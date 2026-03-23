@@ -6,5 +6,6 @@ public enum OrderRejectionReason
     ProductUnavailable = 1,
     InsufficientStock = 2,
     InvalidCustomerAddress = 3,
-    ValidationFailed = 4
+    ValidationFailed = 4,
+    PaymentDeclined = 5
 }

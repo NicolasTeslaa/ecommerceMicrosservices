@@ -57,5 +57,11 @@
     <Project Path="services/OrderService/Order.Infrastructure/Order.Infrastructure.csproj" />
     <Project Path="services/OrderService/Order.Tests/Order.Tests.csproj" />
   </Folder>
-  <Folder Name="/services/PaymentService/" />
+  <Folder Name="/services/PaymentService/">
+    <Project Path="services/PaymentService/Payment.API/Payment.API.csproj" />
+    <Project Path="services/PaymentService/Payment.Application/Payment.Application.csproj" />
+    <Project Path="services/PaymentService/Payment.Domain/Payment.Domain.csproj" />
+    <Project Path="services/PaymentService/Payment.Infrastructure/Payment.Infrastructure.csproj" />
+    <Project Path="services/PaymentService/Payment.Tests/Payment.Tests.csproj" />
+  </Folder>
 </Solution>
