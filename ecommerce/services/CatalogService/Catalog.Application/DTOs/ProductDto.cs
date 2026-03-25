@@ -9,7 +9,6 @@ public class ProductDto
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
-    public int StockQuantity { get; set; }
     public bool Active { get; set; }
     public Guid CategoryId { get; set; }
     public decimal HeightCm { get; set; }
@@ -26,7 +25,6 @@ public class ProductDto
             Name = product.Name,
             Description = product.Description,
             Price = product.Price,
-            StockQuantity = product.StockQuantity,
             Active = product.Active,
             CategoryId = product.CategoryId,
             HeightCm = product.HeightCm,
@@ -45,7 +43,6 @@ public class ProductDto
             Name = product.Name,
             Description = product.Description,
             Price = product.Price,
-            StockQuantity = product.StockQuantity,
             Active = product.Active,
             CategoryId = product.CategoryId,
             HeightCm = product.HeightCm,
@@ -62,7 +59,6 @@ public class ProductDto
             dto.Name,
             dto.Description,
             dto.Price,
-            dto.StockQuantity,
             dto.CategoryId,
             dto.HeightCm,
             dto.WidthCm,

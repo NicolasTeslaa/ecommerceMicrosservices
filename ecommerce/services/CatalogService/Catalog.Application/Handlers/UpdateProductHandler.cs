@@ -10,15 +10,18 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Guid>
     private readonly IProductWriteRepository _repository;
     private readonly IProductReadModelProjector _projector;
     private readonly ICategoryWriteRepository _categoryRepository;
+    private readonly ICatalogProductIntegrationEventPublisher _integrationEventPublisher;
 
     public UpdateProductHandler(
         IProductWriteRepository repository,
         IProductReadModelProjector projector,
-        ICategoryWriteRepository categoryRepository)
+        ICategoryWriteRepository categoryRepository,
+        ICatalogProductIntegrationEventPublisher integrationEventPublisher)
     {
         _repository = repository;
         _projector = projector;
         _categoryRepository = categoryRepository;
+        _integrationEventPublisher = integrationEventPublisher;
     }
 
     public async Task<Guid> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -43,7 +46,6 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Guid>
             request.Name,
             request.Description,
             request.Price,
-            request.StockQuantity,
             request.CategoryId,
             request.HeightCm,
             request.WidthCm,
@@ -53,6 +55,7 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Guid>
 
         await _repository.UpdateAsync(product, cancellationToken);
         await _projector.UpsertAsync(product, cancellationToken);
+        await _integrationEventPublisher.PublishProductCreatedAsync(product, 0, cancellationToken);
 
         return product.Id;
     }

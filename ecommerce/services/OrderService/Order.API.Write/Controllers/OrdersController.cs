@@ -25,4 +25,14 @@ public class OrdersController : ControllerBase
             acceptedOrder,
             "Pedido recebido. Ele sera processado em instantes e voce sera notificado apos a conclusao."));
     }
+
+    [HttpPost("{orderId:guid}/cancel")]
+    public async Task<ActionResult<ApiResponse<OrderActionResultDto>>> Cancel(Guid orderId, [FromBody] CancelOrderCommand command)
+    {
+        command.OrderId = orderId;
+
+        var result = await _mediator.Send(command);
+
+        return Ok(ApiResponse<OrderActionResultDto>.Ok(result, result.Message));
+    }
 }

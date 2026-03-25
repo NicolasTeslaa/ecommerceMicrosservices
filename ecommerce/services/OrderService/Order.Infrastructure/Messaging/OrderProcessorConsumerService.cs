@@ -90,7 +90,7 @@ public class OrderProcessorConsumerService : BackgroundService
         var writeDbContext = serviceProvider.GetRequiredService<OrderWriteDbContext>();
         var readModelProjector = serviceProvider.GetRequiredService<IOrderReadModelProjector>();
         var customerAddressValidationClient = serviceProvider.GetRequiredService<ICustomerAddressValidationClient>();
-        var catalogProductAvailabilityClient = serviceProvider.GetRequiredService<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClient = serviceProvider.GetRequiredService<IInventoryOrderReservationClient>();
         var eventPublisher = serviceProvider.GetRequiredService<IOrderEventPublisher>();
 
         var outboxMessage = await writeDbContext.OrderProcessingOutboxMessages
@@ -102,7 +102,9 @@ public class OrderProcessorConsumerService : BackgroundService
         var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(outboxMessage.Payload)
             ?? throw new InvalidOperationException($"Outbox message '{outboxMessageId}' has an invalid payload.");
 
-        var availabilityResult = await catalogProductAvailabilityClient.ValidateAsync(
+        var availabilityResult = await inventoryOrderReservationClient.ReserveAsync(
+            request.OrderId,
+            request.CustomerId,
             request.Items
                 .Select(item => new ProductAvailabilityCheckItemDto
                 {
@@ -157,6 +159,7 @@ public class OrderProcessorConsumerService : BackgroundService
             }
             catch (CustomerAddressNotFoundException exception)
             {
+                await inventoryOrderReservationClient.ReleaseAsync(request.OrderId, cancellationToken);
                 var rejectedOrder = CreateRejectedOrderForAddress(request, exception.Message);
                 await PersistRejectedOrderAsync(writeDbContext, readModelProjector, rejectedOrder, cancellationToken);
 

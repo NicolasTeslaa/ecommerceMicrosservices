@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryWriteRepository, CategoryWriteRepository>();
         services.AddScoped<ICategoryReadRepository, CategoryReadRepository>();
         services.AddScoped<ICategoryReadModelProjector, CategoryReadModelProjector>();
+        services.AddScoped<ICatalogProductIntegrationEventPublisher, Catalog.Infrastructure.Messaging.KafkaCatalogProductIntegrationEventPublisher>();
 
         return services;
     }

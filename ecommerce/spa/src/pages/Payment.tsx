@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -170,6 +171,15 @@ const PaymentPage = () => {
         setWaitingForPayment(!currentPayment);
       } catch (error) {
         if (!active) return;
+
+        if (axios.isAxiosError(error) && error.response?.status === 404 && attemptsRef.current < maxAttempts) {
+          attemptsRef.current += 1;
+          setWaitingForPayment(true);
+          retryTimeoutRef.current = window.setTimeout(() => {
+            void loadPayment(false);
+          }, retryDelayMs);
+          return;
+        }
 
         toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar o pagamento.');
       } finally {

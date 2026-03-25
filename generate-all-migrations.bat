@@ -4,9 +4,15 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM ========================================
 REM Migration names
 REM ========================================
+REM Services currently covered by EF migrations in this script:
+REM Auth, Cart, Catalog (Write/Read), Customer, Order (Write/Read), Payment and Inventory.
+REM Shipping, Notification, Expedition and NotaFiscal are intentionally excluded because
+REM there is no EF DbContext/migration-enabled persistence project for them in the repo yet.
 set DELETE_PREVIOUS_MIGRATIONS=true
 set CLEAN_BUILD_ARTIFACTS=true
 set RETRY_FAILED_EF=true
+set CONTINUE_ON_STEP_ERROR=true
+set PAUSE_ON_EXIT=false
 set AUTH_MIGRATION=InitialAuth2
 set CART_MIGRATION=InitialCart2
 set CATALOG_WRITE_MIGRATION=InitialCatalogWrite2
@@ -15,6 +21,7 @@ set CUSTOMER_MIGRATION=InitialCustomer2
 set ORDER_WRITE_MIGRATION=InitialOrderWrite2
 set ORDER_READ_MIGRATION=InitialOrderRead2
 set PAYMENT_MIGRATION=InitialPayment2s
+set INVENTORY_MIGRATION=InitialInventory
 
 REM ========================================
 REM Move to repository root
@@ -23,6 +30,8 @@ cd /d "%~dp0"
 
 set LOG_DIR=%CD%\migration-logs
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+set FAILURE_COUNT=0
+set FAILED_STEPS=
 
 call :check_tool dotnet || goto :fail
 call :check_tool dotnet-ef || goto :fail
@@ -36,6 +45,7 @@ if /I "%DELETE_PREVIOUS_MIGRATIONS%"=="true" (
   if exist ".\ecommerce\services\CustomerService\Customer.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\CustomerService\Customer.Infrastructure\Persistence\Migrations"
   if exist ".\ecommerce\services\OrderService\Order.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\OrderService\Order.Infrastructure\Persistence\Migrations"
   if exist ".\ecommerce\services\PaymentService\Payment.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\PaymentService\Payment.Infrastructure\Persistence\Migrations"
+  if exist ".\ecommerce\services\InventoryService\Inventory.Infrastructure\Persistence\Migrations" rd /s /q ".\ecommerce\services\InventoryService\Inventory.Infrastructure\Persistence\Migrations"
 )
 
 echo Restoring solution...
@@ -47,56 +57,72 @@ call :run_migration "AuthService migration" ^
   ".\ecommerce\services\AuthService\Auth.API\Auth.API.csproj" ^
   "AuthDbContext" ^
   "%AUTH_MIGRATION%" ^
-  "Persistence\Migrations" || goto :fail
+  "Persistence\Migrations"
+if errorlevel 1 call :handle_step_failure "AuthService migration"
 
 call :run_migration "CartService migration" ^
   ".\ecommerce\services\CartService\Cart.Infrastructure\Cart.Infrastructure.csproj" ^
   ".\ecommerce\services\CartService\Cart.API\Cart.API.csproj" ^
   "CartDbContext" ^
   "%CART_MIGRATION%" ^
-  "Persistence\Migrations" || goto :fail
+  "Persistence\Migrations"
+if errorlevel 1 call :handle_step_failure "CartService migration"
 
 call :run_migration "CatalogService write migration" ^
   ".\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj" ^
   ".\ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj" ^
   "CatalogWriteDbContext" ^
   "%CATALOG_WRITE_MIGRATION%" ^
-  "Persistence\Migrations\Write" || goto :fail
+  "Persistence\Migrations\Write"
+if errorlevel 1 call :handle_step_failure "CatalogService write migration"
 
 call :run_migration "CatalogService read migration" ^
   ".\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj" ^
   ".\ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj" ^
   "CatalogReadDbContext" ^
   "%CATALOG_READ_MIGRATION%" ^
-  "Persistence\Migrations\Read" || goto :fail
+  "Persistence\Migrations\Read"
+if errorlevel 1 call :handle_step_failure "CatalogService read migration"
 
 call :run_migration "CustomerService migration" ^
   ".\ecommerce\services\CustomerService\Customer.Infrastructure\Customer.Infrastructure.csproj" ^
   ".\ecommerce\services\CustomerService\Customer.API\Customer.API.csproj" ^
   "CustomerDbContext" ^
   "%CUSTOMER_MIGRATION%" ^
-  "Persistence\Migrations" || goto :fail
+  "Persistence\Migrations"
+if errorlevel 1 call :handle_step_failure "CustomerService migration"
 
 call :run_migration "OrderService write migration" ^
   ".\ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj" ^
   ".\ecommerce\services\OrderService\Order.API.Write\Order.API.Write.csproj" ^
   "OrderWriteDbContext" ^
   "%ORDER_WRITE_MIGRATION%" ^
-  "Persistence\Migrations\Write" || goto :fail
+  "Persistence\Migrations\Write"
+if errorlevel 1 call :handle_step_failure "OrderService write migration"
 
 call :run_migration "OrderService read migration" ^
   ".\ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj" ^
   ".\ecommerce\services\OrderService\Order.API.Read\Order.API.Read.csproj" ^
   "OrderReadDbContext" ^
   "%ORDER_READ_MIGRATION%" ^
-  "Persistence\Migrations\Read" || goto :fail
+  "Persistence\Migrations\Read"
+if errorlevel 1 call :handle_step_failure "OrderService read migration"
 
 call :run_migration "PaymentService migration" ^
   ".\ecommerce\services\PaymentService\Payment.Infrastructure\Payment.Infrastructure.csproj" ^
   ".\ecommerce\services\PaymentService\Payment.API\Payment.API.csproj" ^
   "PaymentDbContext" ^
   "%PAYMENT_MIGRATION%" ^
-  "Persistence\Migrations" || goto :fail
+  "Persistence\Migrations"
+if errorlevel 1 call :handle_step_failure "PaymentService migration"
+
+call :run_migration "InventoryService migration" ^
+  ".\ecommerce\services\InventoryService\Inventory.Infrastructure\Inventory.Infrastructure.csproj" ^
+  ".\ecommerce\services\InventoryService\Inventory.API\Inventory.API.csproj" ^
+  "InventoryDbContext" ^
+  "%INVENTORY_MIGRATION%" ^
+  "Persistence\Migrations"
+if errorlevel 1 call :handle_step_failure "InventoryService migration"
 
 echo.
 echo All migrations were generated successfully.
@@ -104,47 +130,68 @@ echo All migrations were generated successfully.
 call :run_db_update "AuthService database" ^
   ".\ecommerce\services\AuthService\Auth.Infrastructure\Auth.Infrastructure.csproj" ^
   ".\ecommerce\services\AuthService\Auth.API\Auth.API.csproj" ^
-  "AuthDbContext" || goto :fail
+  "AuthDbContext"
+if errorlevel 1 call :handle_step_failure "AuthService database"
 
 call :run_db_update "CartService database" ^
   ".\ecommerce\services\CartService\Cart.Infrastructure\Cart.Infrastructure.csproj" ^
   ".\ecommerce\services\CartService\Cart.API\Cart.API.csproj" ^
-  "CartDbContext" || goto :fail
+  "CartDbContext"
+if errorlevel 1 call :handle_step_failure "CartService database"
 
 call :run_db_update "CatalogService write database" ^
   ".\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj" ^
   ".\ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj" ^
-  "CatalogWriteDbContext" || goto :fail
+  "CatalogWriteDbContext"
+if errorlevel 1 call :handle_step_failure "CatalogService write database"
 
 call :run_db_update "CatalogService read database" ^
   ".\ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj" ^
   ".\ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj" ^
-  "CatalogReadDbContext" || goto :fail
+  "CatalogReadDbContext"
+if errorlevel 1 call :handle_step_failure "CatalogService read database"
 
 call :run_db_update "CustomerService database" ^
   ".\ecommerce\services\CustomerService\Customer.Infrastructure\Customer.Infrastructure.csproj" ^
   ".\ecommerce\services\CustomerService\Customer.API\Customer.API.csproj" ^
-  "CustomerDbContext" || goto :fail
+  "CustomerDbContext"
+if errorlevel 1 call :handle_step_failure "CustomerService database"
 
 call :run_db_update "OrderService write database" ^
   ".\ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj" ^
   ".\ecommerce\services\OrderService\Order.API.Write\Order.API.Write.csproj" ^
-  "OrderWriteDbContext" || goto :fail
+  "OrderWriteDbContext"
+if errorlevel 1 call :handle_step_failure "OrderService write database"
 
 call :run_db_update "OrderService read database" ^
   ".\ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj" ^
   ".\ecommerce\services\OrderService\Order.API.Read\Order.API.Read.csproj" ^
-  "OrderReadDbContext" || goto :fail
+  "OrderReadDbContext"
+if errorlevel 1 call :handle_step_failure "OrderService read database"
 
 call :run_db_update "PaymentService database" ^
   ".\ecommerce\services\PaymentService\Payment.Infrastructure\Payment.Infrastructure.csproj" ^
   ".\ecommerce\services\PaymentService\Payment.API\Payment.API.csproj" ^
-  "PaymentDbContext" || goto :fail
+  "PaymentDbContext"
+if errorlevel 1 call :handle_step_failure "PaymentService database"
+
+call :run_db_update "InventoryService database" ^
+  ".\ecommerce\services\InventoryService\Inventory.Infrastructure\Inventory.Infrastructure.csproj" ^
+  ".\ecommerce\services\InventoryService\Inventory.API\Inventory.API.csproj" ^
+  "InventoryDbContext"
+if errorlevel 1 call :handle_step_failure "InventoryService database"
 
 echo.
-echo All migrations were generated and all databases were updated successfully.
+if "%FAILURE_COUNT%"=="0" (
+  echo All migrations were generated and all databases were updated successfully.
+  echo Logs available at "%LOG_DIR%"
+  goto :end
+)
+
+echo Migration script completed with %FAILURE_COUNT% failure(s).
+echo Failed steps: %FAILED_STEPS%
 echo Logs available at "%LOG_DIR%"
-goto :end
+goto :fail
 
 :run_migration
 set STEP_NAME=%~1
@@ -255,13 +302,27 @@ if errorlevel 1 (
 )
 exit /b 0
 
+:handle_step_failure
+set STEP_NAME=%~1
+set /a FAILURE_COUNT+=1
+if defined FAILED_STEPS (
+  set FAILED_STEPS=%FAILED_STEPS%, %STEP_NAME%
+) else (
+  set FAILED_STEPS=%STEP_NAME%
+)
+echo Step failed: %STEP_NAME%
+if /I "%CONTINUE_ON_STEP_ERROR%"=="true" (
+  exit /b 0
+)
+exit /b 1
+
 :fail
 echo.
 echo Migration generation failed. Review the logs in "%LOG_DIR%" and the command output above.
-pause
+if /I "%PAUSE_ON_EXIT%"=="true" pause
 exit /b 1
 
 :end
 echo.
-pause
+if /I "%PAUSE_ON_EXIT%"=="true" pause
 endlocal

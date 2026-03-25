@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option csharp_namespace = "ECommerce.Shared.Protos";
+
+package inventoryorderreservation;
+
+service InventoryOrderReservation {
+  rpc ReserveOrderItems (ReserveOrderItemsRequest) returns (ReserveOrderItemsReply);
+  rpc ReleaseOrderReservation (ReleaseOrderReservationRequest) returns (ReleaseOrderReservationReply);
+}
+
+message ReserveOrderItemsRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  repeated ReserveOrderItem items = 3;
+}
+
+message ReserveOrderItem {
+  string product_id = 1;
+  string product_name = 2;
+  int32 quantity = 3;
+}
+
+message ReserveOrderItemsReply {
+  bool is_success = 1;
+  string reason = 2;
+  repeated ReserveOrderRejectedItem rejected_items = 3;
+}
+
+message ReserveOrderRejectedItem {
+  string product_id = 1;
+  string product_name = 2;
+  int32 requested_quantity = 3;
+  int32 available_quantity = 4;
+  string reason = 5;
+}
+
+message ReleaseOrderReservationRequest {
+  string order_id = 1;
+}
+
+message ReleaseOrderReservationReply {
+  bool is_success = 1;
+  string reason = 2;
+}

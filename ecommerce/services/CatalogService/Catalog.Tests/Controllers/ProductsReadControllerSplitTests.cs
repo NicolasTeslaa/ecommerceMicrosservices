@@ -29,7 +29,6 @@ public class ProductsReadControllerTests
             Name = "Mouse",
             Description = "Mouse sem fio",
             Price = 120m,
-            StockQuantity = 30,
             Active = true,
             CategoryId = Guid.NewGuid()
         };
@@ -73,7 +72,6 @@ public class ProductsReadControllerTests
                 Name = "Produto 1",
                 Description = "Desc 1",
                 Price = 100m,
-                StockQuantity = 5,
                 Active = true,
                 CategoryId = Guid.NewGuid()
             },
@@ -83,7 +81,6 @@ public class ProductsReadControllerTests
                 Name = "Produto 2",
                 Description = "Desc 2",
                 Price = 200m,
-                StockQuantity = 8,
                 Active = true,
                 CategoryId = Guid.NewGuid()
             }

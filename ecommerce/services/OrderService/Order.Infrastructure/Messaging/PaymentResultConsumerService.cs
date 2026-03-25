@@ -93,7 +93,9 @@ public class PaymentResultConsumerService : BackgroundService
             var order = await writeDbContext.Orders.Include(item => item.Items)
                 .FirstOrDefaultAsync(item => item.Id == integrationEvent.OrderId, cancellationToken);
 
-            if (order is null || order.Status == Order.Domain.Enums.OrderStatus.PaymentRejected)
+            if (order is null
+                || order.Status == Order.Domain.Enums.OrderStatus.PaymentRejected
+                || order.Status == Order.Domain.Enums.OrderStatus.Cancelled)
                 return;
 
             order.MarkConfirmed();
@@ -112,7 +114,8 @@ public class PaymentResultConsumerService : BackgroundService
         if (failedOrder is null)
             return;
 
-        if (failedOrder.Status == Order.Domain.Enums.OrderStatus.Confirmed)
+        if (failedOrder.Status == Order.Domain.Enums.OrderStatus.Confirmed
+            || failedOrder.Status == Order.Domain.Enums.OrderStatus.Cancelled)
             return;
 
         if (!failedEvent.MaxAttemptsReached)

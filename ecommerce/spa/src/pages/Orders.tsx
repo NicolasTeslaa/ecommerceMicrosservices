@@ -1,10 +1,13 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronDown, Package, ShoppingBag } from 'lucide-react';
+import { ChevronDown, Loader2, Package, ShoppingBag } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePagedOrders } from '@/hooks/useData';
 import { useAuth } from '@/store/useAuth';
+import { orderService } from '@/services/backendApi';
 import { formatCurrency } from '@/utils/format';
+import { toast } from 'sonner';
 import {
   Pagination,
   PaginationContent,
@@ -63,6 +66,8 @@ const Orders = () => {
   const customerId = useAuth((state) => state.user?.customerId ?? '');
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const [currentPage, setCurrentPage] = useState(1);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const { data, isLoading, isFetching } = usePagedOrders(customerId, currentPage, ORDERS_PER_PAGE);
 
   const orders = data?.items ?? [];
@@ -72,6 +77,22 @@ const Orders = () => {
     () => buildVisiblePages(currentPage, totalPages),
     [currentPage, totalPages]
   );
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!customerId || cancellingOrderId) return;
+
+    setCancellingOrderId(orderId);
+
+    try {
+      const result = await orderService.cancel(orderId, customerId);
+      toast.success(result.message);
+      await queryClient.invalidateQueries({ queryKey: ['orders', customerId] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel cancelar o pedido.');
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   if (!isAuthenticated || !customerId) {
     return (
@@ -155,6 +176,12 @@ const Orders = () => {
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
+                  {(() => {
+                    const normalizedStatus = typeof order.status === 'string' ? order.status : String(order.status);
+                    const canPayNow = normalizedStatus === 'PendingPayment' || normalizedStatus === 'Pending' || normalizedStatus === '1';
+                    const canCancel = canPayNow;
+
+                    return (
                   <details className="group rounded-3xl glass-panel overflow-hidden">
                   <summary className="list-none cursor-pointer p-6 sm:p-7">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -165,7 +192,7 @@ const Orders = () => {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:min-w-[460px]">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:min-w-[460px]">
                         <div>
                           <p className="text-xs font-mono text-muted-foreground uppercase mb-1">Status</p>
                           <p className="font-medium">{formatOrderStatus(order.status)}</p>
@@ -182,7 +209,36 @@ const Orders = () => {
                           <p className="text-xs font-mono text-muted-foreground uppercase mb-1">Total</p>
                           <p className="font-semibold text-primary">{formatCurrency(order.totalAmount)}</p>
                         </div>
+                    </div>
+
+                    {(canPayNow || canCancel) && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {canPayNow && (
+                          <Link
+                            to={`/payment/${order.id}`}
+                            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            Pagar agora
+                          </Link>
+                        )}
+                        {canCancel && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleCancelOrder(order.id);
+                            }}
+                            disabled={cancellingOrderId === order.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground disabled:opacity-60"
+                          >
+                            {cancellingOrderId === order.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                            Cancelar pedido
+                          </button>
+                        )}
                       </div>
+                    )}
 
                       <div className="flex items-center gap-2 text-muted-foreground group-open:text-foreground transition-colors">
                         <span className="text-xs font-mono uppercase">Detalhes</span>
@@ -249,6 +305,8 @@ const Orders = () => {
                     </div>
                   </div>
                   </details>
+                    );
+                  })()}
                 </motion.div>
               ))}
             </div>

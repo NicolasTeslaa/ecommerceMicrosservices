@@ -184,6 +184,16 @@ public class Order
         RejectionDetail = string.IsNullOrWhiteSpace(detail) ? "Payment was rejected." : detail.Trim();
     }
 
+    public void Cancel(string? detail = null)
+    {
+        if (Status != OrderStatus.PendingPayment)
+            throw new InvalidOrderStatusException("Only orders awaiting payment can be cancelled.");
+
+        Status = OrderStatus.Cancelled;
+        RejectionReason = null;
+        RejectionDetail = string.IsNullOrWhiteSpace(detail) ? null : detail.Trim();
+    }
+
     private static void Validate(
         Guid customerId,
         Guid customerAddressId,

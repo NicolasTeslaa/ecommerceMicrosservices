@@ -21,6 +21,7 @@ public class CreateProductHandlerTests
     private readonly Mock<IProductWriteRepository> _repositoryMock;
     private readonly Mock<IProductReadModelProjector> _projectorMock;
     private readonly Mock<ICategoryWriteRepository> _categoryRepositoryMock;
+    private readonly Mock<ICatalogProductIntegrationEventPublisher> _integrationEventPublisherMock;
     private readonly CreateProductHandler _handler;
 
     public CreateProductHandlerTests()
@@ -28,7 +29,12 @@ public class CreateProductHandlerTests
         _repositoryMock = new Mock<IProductWriteRepository>();
         _projectorMock = new Mock<IProductReadModelProjector>();
         _categoryRepositoryMock = new Mock<ICategoryWriteRepository>();
-        _handler = new CreateProductHandler(_repositoryMock.Object, _projectorMock.Object, _categoryRepositoryMock.Object);
+        _integrationEventPublisherMock = new Mock<ICatalogProductIntegrationEventPublisher>();
+        _handler = new CreateProductHandler(
+            _repositoryMock.Object,
+            _projectorMock.Object,
+            _categoryRepositoryMock.Object,
+            _integrationEventPublisherMock.Object);
     }
 
     [Fact]
@@ -42,7 +48,6 @@ public class CreateProductHandlerTests
             Name = "Notebook",
             Description = "Notebook gamer",
             Price = 5000m,
-            StockQuantity = 10,
             CategoryId = Guid.NewGuid(),
             HeightCm = HeightCm,
             WidthCm = WidthCm,
@@ -73,7 +78,6 @@ public class CreateProductHandlerTests
         Assert.Equal(command.Name, capturedProduct!.Name);
         Assert.Equal(command.Description, capturedProduct.Description);
         Assert.Equal(command.Price, capturedProduct.Price);
-        Assert.Equal(command.StockQuantity, capturedProduct.StockQuantity);
         Assert.Equal(command.CategoryId, capturedProduct.CategoryId);
         Assert.Equal(command.HeightCm, capturedProduct.HeightCm);
         Assert.Equal(command.WidthCm, capturedProduct.WidthCm);
@@ -103,7 +107,6 @@ public class CreateProductHandlerTests
             Name = "Notebook",
             Description = "Notebook gamer",
             Price = 5000m,
-            StockQuantity = 10,
             CategoryId = Guid.NewGuid(),
             HeightCm = HeightCm,
             WidthCm = WidthCm,
@@ -137,7 +140,6 @@ public class CreateProductHandlerTests
             Name = "Notebook",
             Description = "Notebook gamer",
             Price = 5000m,
-            StockQuantity = 10,
             CategoryId = Guid.Empty,
             HeightCm = HeightCm,
             WidthCm = WidthCm,
@@ -168,6 +170,7 @@ public class DeactivateProductHandlerTests
 {
     private readonly Mock<IProductWriteRepository> _repositoryMock;
     private readonly Mock<IProductReadModelProjector> _projectorMock;
+    private readonly Mock<ICatalogProductIntegrationEventPublisher> _integrationEventPublisherMock;
     private readonly DeactivateProductHandler _handler;
     private const decimal HeightCm = 10m;
     private const decimal WidthCm = 20m;
@@ -178,7 +181,11 @@ public class DeactivateProductHandlerTests
     {
         _repositoryMock = new Mock<IProductWriteRepository>();
         _projectorMock = new Mock<IProductReadModelProjector>();
-        _handler = new DeactivateProductHandler(_repositoryMock.Object, _projectorMock.Object);
+        _integrationEventPublisherMock = new Mock<ICatalogProductIntegrationEventPublisher>();
+        _handler = new DeactivateProductHandler(
+            _repositoryMock.Object,
+            _projectorMock.Object,
+            _integrationEventPublisherMock.Object);
     }
 
     [Fact]
@@ -244,7 +251,6 @@ public class DeactivateProductHandlerTests
             "Mouse",
             "Mouse gamer",
             150m,
-            20,
             Guid.NewGuid(),
             HeightCm,
             WidthCm,
@@ -310,8 +316,8 @@ public class GetAllProductsHandlerTests
 
         var products = new List<ProductReadModel>
         {
-            new() { Id = Guid.NewGuid(), Name = "Produto 1", Description = "Desc 1", Price = 100m, StockQuantity = 5, Active = true, CategoryId = Guid.NewGuid() },
-            new() { Id = Guid.NewGuid(), Name = "Produto 2", Description = "Desc 2", Price = 200m, StockQuantity = 8, Active = true, CategoryId = Guid.NewGuid() }
+            new() { Id = Guid.NewGuid(), Name = "Produto 1", Description = "Desc 1", Price = 100m, Active = true, CategoryId = Guid.NewGuid() },
+            new() { Id = Guid.NewGuid(), Name = "Produto 2", Description = "Desc 2", Price = 200m, Active = true, CategoryId = Guid.NewGuid() }
         };
 
         _repositoryMock
@@ -431,7 +437,6 @@ public class GetProductByIdHandlerTests
             Name = "Teclado",
             Description = "Teclado mecânico",
             Price = 300m,
-            StockQuantity = 12,
             Active = true,
             CategoryId = Guid.NewGuid()
         };
@@ -451,7 +456,6 @@ public class GetProductByIdHandlerTests
         Assert.Equal(product.Name, result.Name);
         Assert.Equal(product.Description, result.Description);
         Assert.Equal(product.Price, result.Price);
-        Assert.Equal(product.StockQuantity, result.StockQuantity);
         Assert.Equal(product.Active, result.Active);
         Assert.Equal(product.CategoryId, result.CategoryId);
 
@@ -466,6 +470,7 @@ public class UpdateProductHandlerTests
     private readonly Mock<IProductWriteRepository> _repositoryMock;
     private readonly Mock<IProductReadModelProjector> _projectorMock;
     private readonly Mock<ICategoryWriteRepository> _categoryRepositoryMock;
+    private readonly Mock<ICatalogProductIntegrationEventPublisher> _integrationEventPublisherMock;
     private readonly UpdateProductHandler _handler;
     private const decimal HeightCm = 10m;
     private const decimal WidthCm = 20m;
@@ -477,7 +482,12 @@ public class UpdateProductHandlerTests
         _repositoryMock = new Mock<IProductWriteRepository>();
         _projectorMock = new Mock<IProductReadModelProjector>();
         _categoryRepositoryMock = new Mock<ICategoryWriteRepository>();
-        _handler = new UpdateProductHandler(_repositoryMock.Object, _projectorMock.Object, _categoryRepositoryMock.Object);
+        _integrationEventPublisherMock = new Mock<ICatalogProductIntegrationEventPublisher>();
+        _handler = new UpdateProductHandler(
+            _repositoryMock.Object,
+            _projectorMock.Object,
+            _categoryRepositoryMock.Object,
+            _integrationEventPublisherMock.Object);
     }
 
     [Fact]
@@ -490,7 +500,6 @@ public class UpdateProductHandlerTests
             Name = "Novo nome",
             Description = "Nova descrição",
             Price = 999m,
-            StockQuantity = 15,
             CategoryId = Guid.NewGuid(),
             HeightCm = HeightCm,
             WidthCm = WidthCm,
@@ -531,7 +540,6 @@ public class UpdateProductHandlerTests
             Name = "Novo nome",
             Description = "Nova descrição",
             Price = 999m,
-            StockQuantity = 15,
             CategoryId = Guid.Empty,
             HeightCm = HeightCm,
             WidthCm = WidthCm,
@@ -569,7 +577,6 @@ public class UpdateProductHandlerTests
             Name = "Novo nome",
             Description = "Nova descrição",
             Price = 999m,
-            StockQuantity = 15,
             CategoryId = Guid.NewGuid(),
             HeightCm = HeightCm,
             WidthCm = WidthCm,
@@ -614,7 +621,6 @@ public class UpdateProductHandlerTests
             "Nome antigo",
             "Descrição antiga",
             100m,
-            5,
             Guid.NewGuid(),
             HeightCm,
             WidthCm,
@@ -628,7 +634,6 @@ public class UpdateProductHandlerTests
             Name = "Novo nome",
             Description = "Nova descrição",
             Price = 999m,
-            StockQuantity = 15,
             CategoryId = Guid.NewGuid(),
             HeightCm = 11m,
             WidthCm = 21m,
@@ -670,7 +675,6 @@ public class UpdateProductHandlerTests
             "Nome antigo",
             "Descrição antiga",
             100m,
-            5,
             Guid.NewGuid(),
             HeightCm,
             WidthCm,
@@ -686,7 +690,6 @@ public class UpdateProductHandlerTests
             Name = "Nome novo",
             Description = "Descrição nova",
             Price = 250m,
-            StockQuantity = 20,
             CategoryId = newCategoryId,
             HeightCm = 12m,
             WidthCm = 22m,
@@ -719,7 +722,6 @@ public class UpdateProductHandlerTests
         Assert.Equal(command.Name, product.Name);
         Assert.Equal(command.Description, product.Description);
         Assert.Equal(command.Price, product.Price);
-        Assert.Equal(command.StockQuantity, product.StockQuantity);
         Assert.Equal(command.CategoryId, product.CategoryId);
         Assert.Equal(command.HeightCm, product.HeightCm);
         Assert.Equal(command.WidthCm, product.WidthCm);

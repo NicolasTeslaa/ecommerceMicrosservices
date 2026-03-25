@@ -35,9 +35,11 @@ public static class DependencyInjection
         services.AddScoped<IOrderReadModelProjector, OrderReadModelProjector>();
         services.AddScoped<IOrderEventPublisher, KafkaOrderEventPublisher>();
         services.AddScoped<IOrderCheckoutService, OrderCheckoutService>();
+        services.AddScoped<IOrderCancellationService, OrderCancellationService>();
         services.AddScoped<IOrderProcessingQueuePublisher, KafkaOrderProcessingQueuePublisher>();
         services.AddScoped<ICustomerAddressValidationClient, CustomerAddressValidationGrpcClient>();
         services.AddScoped<ICatalogProductAvailabilityClient, CatalogProductAvailabilityGrpcClient>();
+        services.AddScoped<IInventoryOrderReservationClient, InventoryOrderReservationGrpcClient>();
 
         if (enableOutboxDispatcher)
             services.AddHostedService<OrderOutboxDispatcherService>();
@@ -56,6 +58,11 @@ public static class DependencyInjection
         services.AddGrpcClient<CatalogProductAvailability.CatalogProductAvailabilityClient>(options =>
         {
             options.Address = new Uri(configuration["CatalogService:BaseUrl"] ?? "https://localhost:5101");
+        });
+
+        services.AddGrpcClient<InventoryOrderReservation.InventoryOrderReservationClient>(options =>
+        {
+            options.Address = new Uri(configuration["InventoryService:BaseUrl"] ?? "https://localhost:5111");
         });
 
         return services;

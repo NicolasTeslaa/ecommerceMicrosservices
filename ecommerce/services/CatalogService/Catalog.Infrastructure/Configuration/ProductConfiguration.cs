@@ -26,10 +26,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasPrecision(18, 2)
             .IsRequired();
 
-        builder.Property(x => x.StockQuantity)
-            .HasColumnName("stock_quantity")
-            .IsRequired();
-
         builder.Property(x => x.Active)
             .HasColumnName("active")
             .IsRequired();

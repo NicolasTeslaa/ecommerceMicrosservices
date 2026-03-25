@@ -29,6 +29,7 @@ export interface Product {
   description: string;
   price: number;
   stockQuantity: number;
+  reservedQuantity?: number;
   active: boolean;
   categoryId: string;
   categoryName?: string;
@@ -224,4 +225,11 @@ export interface Payment {
   maxAttemptsReached: boolean;
   createdAtUtc: string;
   updatedAtUtc: string;
+}
+
+export interface InventoryAvailability {
+  productId: string;
+  availableQuantity: number;
+  reservedQuantity: number;
+  active: boolean;
 }

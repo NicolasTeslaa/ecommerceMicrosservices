@@ -7,6 +7,7 @@ import type {
   Category,
   CreateOrderPayload,
   CustomerAddress,
+  InventoryAvailability,
   Payment,
   PaymentConfig,
   Order,
@@ -54,6 +55,33 @@ const applyCategoryNames = (products: Product[], categories: Category[]): Produc
   }));
 };
 
+const applyInventoryAvailability = (
+  products: Product[],
+  availability: InventoryAvailability[]
+): Product[] => {
+  const availabilityByProductId = new Map(availability.map((item) => [item.productId, item]));
+
+  return products.map((product) => {
+    const inventory = availabilityByProductId.get(product.id);
+
+    if (!inventory) {
+      return {
+        ...product,
+        stockQuantity: 0,
+        reservedQuantity: 0,
+        active: product.active && false,
+      };
+    }
+
+    return {
+      ...product,
+      stockQuantity: inventory.availableQuantity,
+      reservedQuantity: inventory.reservedQuantity,
+      active: product.active && inventory.active,
+    };
+  });
+};
+
 export const productService = {
   async getPage(
     pageNumber = 1,
@@ -75,8 +103,13 @@ export const productService = {
       backendApi.get<ApiResponse<Category[]>>('/api/catalog/categories'),
     ]);
 
+    const catalogProducts = applyCategoryNames(unwrap(productResponse), unwrap(categoryResponse));
+    const inventoryItems = await inventoryService.getAvailability(
+      catalogProducts.map((product) => product.id)
+    );
+
     return {
-      items: applyCategoryNames(unwrap(productResponse), unwrap(categoryResponse)),
+      items: applyInventoryAvailability(catalogProducts, inventoryItems),
       pagination: productResponse.pagination,
     };
   },
@@ -87,12 +120,35 @@ export const productService = {
   },
 
   async getById(id: string): Promise<Product | undefined> {
-    const [{ data: productResponse }, { data: categoryResponse }] = await Promise.all([
+    const [{ data: productResponse }, { data: categoryResponse }, inventoryItem] = await Promise.all([
       backendApi.get<ApiResponse<Product>>(`/api/catalog/products/${id}`),
       backendApi.get<ApiResponse<Category[]>>('/api/catalog/categories'),
+      inventoryService.getByProductId(id),
     ]);
 
-    return applyCategoryNames([unwrap(productResponse)], unwrap(categoryResponse))[0];
+    return applyInventoryAvailability(
+      applyCategoryNames([unwrap(productResponse)], unwrap(categoryResponse)),
+      inventoryItem ? [inventoryItem] : []
+    )[0];
+  },
+};
+
+export const inventoryService = {
+  async getByProductId(productId: string): Promise<InventoryAvailability | null> {
+    const { data } = await backendApi.get<ApiResponse<InventoryAvailability | null>>(`/api/inventory/products/${productId}`);
+    return unwrap(data);
+  },
+
+  async getAvailability(productIds: string[]): Promise<InventoryAvailability[]> {
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    const { data } = await backendApi.post<ApiResponse<InventoryAvailability[]>>('/api/inventory/products/availability', {
+      productIds,
+    });
+
+    return unwrap(data);
   },
 };
 
@@ -223,6 +279,15 @@ export const shippingService = {
 export const orderService = {
   async create(payload: CreateOrderPayload): Promise<OrderApiResponse> {
     const { data } = await backendApi.post<ApiResponse<OrderApiResponse>>('/api/orders', payload);
+    return unwrap(data);
+  },
+
+  async cancel(orderId: string, customerId: string): Promise<{ orderId: string; status: string; message: string }> {
+    const { data } = await backendApi.post<ApiResponse<{ orderId: string; status: string; message: string }>>(
+      `/api/orders/${orderId}/cancel`,
+      { customerId }
+    );
+
     return unwrap(data);
   },
 

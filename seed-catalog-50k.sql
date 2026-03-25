@@ -10,6 +10,9 @@ DELIMITER $$
 CREATE PROCEDURE seed_catalog_massive_load()
 BEGIN
     IF @replace_existing_data = 1 THEN
+        TRUNCATE TABLE `ecommerce-platform-inventory`.ProcessedKafkaMessages;
+        TRUNCATE TABLE `ecommerce-platform-inventory`.InventoryReservations;
+        TRUNCATE TABLE `ecommerce-platform-inventory`.InventoryItems;
         TRUNCATE TABLE `ecommerce-plataform-catalog-read`.products;
         TRUNCATE TABLE `ecommerce-plataform-catalog-read`.categories;
         TRUNCATE TABLE `ecommerce-plataform-catalog-write`.products;
@@ -18,6 +21,7 @@ BEGIN
 
     DROP TEMPORARY TABLE IF EXISTS tmp_numbers;
     DROP TEMPORARY TABLE IF EXISTS tmp_categories;
+    DROP TEMPORARY TABLE IF EXISTS tmp_product_seed;
 
     CREATE TEMPORARY TABLE tmp_categories (
         seq INT NOT NULL PRIMARY KEY,
@@ -54,6 +58,21 @@ BEGIN
         product_number INT NOT NULL PRIMARY KEY
     );
 
+    CREATE TEMPORARY TABLE tmp_product_seed (
+        Id CHAR(36) NOT NULL PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        description VARCHAR(1000) NOT NULL,
+        price DECIMAL(18,2) NOT NULL,
+        stock_quantity INT NOT NULL,
+        active TINYINT(1) NOT NULL,
+        category_id CHAR(36) NOT NULL,
+        height_cm DECIMAL(10,2) NOT NULL,
+        width_cm DECIMAL(10,2) NOT NULL,
+        cubage_m3 DECIMAL(10,4) NOT NULL,
+        weight_kg DECIMAL(10,3) NOT NULL,
+        origin_zip_code VARCHAR(20) NOT NULL
+    );
+
     INSERT INTO tmp_numbers (product_number)
     SELECT generated_number
     FROM (
@@ -77,7 +96,7 @@ BEGIN
     ) numbers
     WHERE generated_number <= @target_products;
 
-    INSERT INTO `ecommerce-plataform-catalog-write`.products
+    INSERT INTO tmp_product_seed
     (
         Id,
         name,
@@ -285,13 +304,12 @@ BEGIN
     JOIN tmp_categories category
         ON category.seq = MOD(numbers.product_number - 1, 10) + 1;
 
-    INSERT INTO `ecommerce-plataform-catalog-read`.products
+    INSERT INTO `ecommerce-plataform-catalog-write`.products
     (
         Id,
         name,
         description,
         price,
-        stock_quantity,
         active,
         category_id,
         height_cm,
@@ -305,7 +323,34 @@ BEGIN
         name,
         description,
         price,
-        stock_quantity,
+        active,
+        category_id,
+        height_cm,
+        width_cm,
+        cubage_m3,
+        weight_kg,
+        origin_zip_code
+    FROM tmp_product_seed;
+
+    INSERT INTO `ecommerce-plataform-catalog-read`.products
+    (
+        Id,
+        name,
+        description,
+        price,
+        active,
+        category_id,
+        height_cm,
+        width_cm,
+        cubage_m3,
+        weight_kg,
+        origin_zip_code
+    )
+    SELECT
+        Id,
+        name,
+        description,
+        price,
         active,
         category_id,
         height_cm,
@@ -318,7 +363,6 @@ BEGIN
         name = VALUES(name),
         description = VALUES(description),
         price = VALUES(price),
-        stock_quantity = VALUES(stock_quantity),
         active = VALUES(active),
         category_id = VALUES(category_id),
         height_cm = VALUES(height_cm),
@@ -326,6 +370,33 @@ BEGIN
         cubage_m3 = VALUES(cubage_m3),
         weight_kg = VALUES(weight_kg),
         origin_zip_code = VALUES(origin_zip_code);
+
+    INSERT INTO `ecommerce-platform-inventory`.InventoryItems
+    (
+        Id,
+        ProductId,
+        ProductName,
+        AvailableQuantity,
+        ReservedQuantity,
+        Active,
+        CreatedAtUtc,
+        UpdatedAtUtc
+    )
+    SELECT
+        UUID() AS Id,
+        Id AS ProductId,
+        name AS ProductName,
+        stock_quantity AS AvailableQuantity,
+        0 AS ReservedQuantity,
+        active AS Active,
+        UTC_TIMESTAMP() AS CreatedAtUtc,
+        UTC_TIMESTAMP() AS UpdatedAtUtc
+    FROM tmp_product_seed
+    ON DUPLICATE KEY UPDATE
+        ProductName = VALUES(ProductName),
+        AvailableQuantity = VALUES(AvailableQuantity),
+        Active = VALUES(Active),
+        UpdatedAtUtc = VALUES(UpdatedAtUtc);
 
     SELECT 'catalog_write.categories' AS table_name, COUNT(*) AS total_rows
     FROM `ecommerce-plataform-catalog-write`.categories
@@ -337,10 +408,14 @@ BEGIN
     FROM `ecommerce-plataform-catalog-read`.categories
     UNION ALL
     SELECT 'catalog_read.products', COUNT(*)
-    FROM `ecommerce-plataform-catalog-read`.products;
+    FROM `ecommerce-plataform-catalog-read`.products
+    UNION ALL
+    SELECT 'inventory.items', COUNT(*)
+    FROM `ecommerce-platform-inventory`.InventoryItems;
 
     DROP TEMPORARY TABLE IF EXISTS tmp_numbers;
     DROP TEMPORARY TABLE IF EXISTS tmp_categories;
+    DROP TEMPORARY TABLE IF EXISTS tmp_product_seed;
 END$$
 
 DELIMITER ;

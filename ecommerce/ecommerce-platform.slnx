@@ -45,7 +45,13 @@
     <Project Path="services/CustomerService/Customer.Infrastructure/Customer.Infrastructure.csproj" />
     <Project Path="services/CustomerService/Customer.Tests/Customer.Tests.csproj" />
   </Folder>
-  <Folder Name="/services/InventoryService/" />
+  <Folder Name="/services/InventoryService/">
+    <Project Path="services/InventoryService/Inventory.API/Inventory.API.csproj" />
+    <Project Path="services/InventoryService/Inventory.Application/Inventory.Application.csproj" />
+    <Project Path="services/InventoryService/Inventory.Domain/Inventory.Domain.csproj" />
+    <Project Path="services/InventoryService/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
+    <Project Path="services/InventoryService/Inventory.Tests/Inventory.Tests.csproj" />
+  </Folder>
   <Folder Name="/services/NotificationService/" />
   <Folder Name="/services/OrderService/">
     <Project Path="services/OrderService/Order.API.Common/Order.API.Common.csproj" />

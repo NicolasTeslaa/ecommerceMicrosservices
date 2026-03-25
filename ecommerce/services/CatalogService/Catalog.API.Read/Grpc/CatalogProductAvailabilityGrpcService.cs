@@ -94,17 +94,6 @@ public class CatalogProductAvailabilityGrpcService : CatalogProductAvailability.
                 continue;
             }
 
-            if (product.StockQuantity < item.RequestedQuantity)
-            {
-                rejectedItems.Add(new RejectedOrderItem
-                {
-                    ProductId = item.ProductId.ToString(),
-                    ProductName = product.Name,
-                    RequestedQuantity = item.RequestedQuantity,
-                    AvailableQuantity = product.StockQuantity,
-                    Reason = "Insufficient stock."
-                });
-            }
         }
 
         if (rejectedItems.Count == 0)

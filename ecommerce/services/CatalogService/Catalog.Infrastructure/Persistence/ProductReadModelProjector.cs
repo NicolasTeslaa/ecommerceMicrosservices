@@ -32,7 +32,6 @@ public class ProductReadModelProjector : IProductReadModelProjector
                     Name = product.Name,
                     Description = product.Description,
                     Price = product.Price,
-                    StockQuantity = product.StockQuantity,
                     Active = product.Active,
                     CategoryId = product.CategoryId,
                     HeightCm = product.HeightCm,
@@ -47,7 +46,6 @@ public class ProductReadModelProjector : IProductReadModelProjector
                 existingProduct.Name = product.Name;
                 existingProduct.Description = product.Description;
                 existingProduct.Price = product.Price;
-                existingProduct.StockQuantity = product.StockQuantity;
                 existingProduct.Active = product.Active;
                 existingProduct.CategoryId = product.CategoryId;
                 existingProduct.HeightCm = product.HeightCm;

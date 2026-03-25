@@ -6,7 +6,6 @@ public class Product
     public string Name { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public decimal Price { get; private set; }
-    public int StockQuantity { get; private set; }
     public bool Active { get; private set; }
     public Guid CategoryId { get; private set; }
     public decimal HeightCm { get; private set; }
@@ -21,7 +20,6 @@ public class Product
         string name,
         string description,
         decimal price,
-        int stockQuantity,
         Guid categoryId,
         decimal heightCm,
         decimal widthCm,
@@ -29,13 +27,12 @@ public class Product
         decimal weightKg,
         string originZipCode)
     {
-        Validate(name, price, stockQuantity, categoryId, heightCm, widthCm, cubageM3, weightKg, originZipCode);
+        Validate(name, price, categoryId, heightCm, widthCm, cubageM3, weightKg, originZipCode);
 
         Id = Guid.NewGuid();
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
         Price = price;
-        StockQuantity = stockQuantity;
         CategoryId = categoryId;
         HeightCm = heightCm;
         WidthCm = widthCm;
@@ -49,7 +46,6 @@ public class Product
         string name,
         string description,
         decimal price,
-        int stockQuantity,
         Guid categoryId,
         decimal heightCm,
         decimal widthCm,
@@ -57,26 +53,17 @@ public class Product
         decimal weightKg,
         string originZipCode)
     {
-        Validate(name, price, stockQuantity, categoryId, heightCm, widthCm, cubageM3, weightKg, originZipCode);
+        Validate(name, price, categoryId, heightCm, widthCm, cubageM3, weightKg, originZipCode);
 
         Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
         Price = price;
-        StockQuantity = stockQuantity;
         CategoryId = categoryId;
         HeightCm = heightCm;
         WidthCm = widthCm;
         CubageM3 = cubageM3;
         WeightKg = weightKg;
         OriginZipCode = originZipCode.Trim();
-    }
-
-    public void IncreaseStock(int quantity)
-    {
-        if (quantity <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidStockQuantityException();
-
-        StockQuantity += quantity;
     }
 
     public bool MatchesCatalogDefinition(
@@ -106,7 +93,6 @@ public class Product
     private static void Validate(
         string name,
         decimal price,
-        int stockQuantity,
         Guid categoryId,
         decimal heightCm,
         decimal widthCm,
@@ -119,9 +105,6 @@ public class Product
 
         if (price <= 0)
             throw new Catalog.Domain.Exceptions.InvalidProductPriceException();
-
-        if (stockQuantity <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidStockQuantityException();
 
         if (categoryId == Guid.Empty)
             throw new Catalog.Domain.Exceptions.InvalidCategoryIdException();
