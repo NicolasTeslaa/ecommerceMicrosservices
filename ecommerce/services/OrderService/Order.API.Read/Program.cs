@@ -7,6 +7,8 @@ using Order.Application.Handlers;
 using Order.Domain.Enums;
 using Order.Infrastructure.Configuration;
 
+var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
@@ -45,7 +47,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
+
+if (!runningInContainer)
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthorization();
 app.MapGrpcService<OrderPaymentAccessGrpcService>();
 app.MapControllers();

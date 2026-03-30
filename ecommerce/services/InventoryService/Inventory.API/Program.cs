@@ -6,9 +6,14 @@ using Inventory.Infrastructure.Grpc;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
+var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("https://localhost:5111", "http://localhost:5121");
+if (!runningInContainer)
+{
+    builder.WebHost.UseUrls("https://localhost:5111", "http://localhost:5121");
+}
 
 builder.Services.AddControllers();
 builder.Services.AddGrpc();
@@ -42,7 +47,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
+
+if (!runningInContainer)
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthorization();
 app.MapGrpcService<InventoryOrderReservationGrpcService>();
 app.MapControllers();

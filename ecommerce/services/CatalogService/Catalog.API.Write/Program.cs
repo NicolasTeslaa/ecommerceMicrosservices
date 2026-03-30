@@ -5,6 +5,8 @@ using Catalog.Infrastructure.Configuration;
 using ECommerce.Shared.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
+var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -44,7 +46,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
+
+if (!runningInContainer)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 

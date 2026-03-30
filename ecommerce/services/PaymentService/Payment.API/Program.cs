@@ -10,9 +10,19 @@ using Payment.Application.Interfaces;
 using Payment.Domain.Enums;
 using Payment.Infrastructure.Configuration;
 
+var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
+if (runningInContainer)
+{
+    AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("https://localhost:5110", "http://localhost:5120");
+if (!runningInContainer)
+{
+    builder.WebHost.UseUrls("https://localhost:5110", "http://localhost:5120");
+}
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();

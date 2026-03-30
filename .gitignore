@@ -57,3 +57,4 @@ docker-compose.override.yml
 /.serena/
 **/Migrations/
 **/migrations/
+ecommerce/services/PaymentService/Payment.API/appsettings.json

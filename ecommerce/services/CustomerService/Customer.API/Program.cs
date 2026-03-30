@@ -6,9 +6,14 @@ using Customer.Infrastructure.Configuration;
 using ECommerce.Shared.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
+var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("https://localhost:5107", "http://localhost:5117");
+if (!runningInContainer)
+{
+    builder.WebHost.UseUrls("https://localhost:5107", "http://localhost:5117");
+}
 
 Console.WriteLine("Starting Customer.API host configuration...");
 

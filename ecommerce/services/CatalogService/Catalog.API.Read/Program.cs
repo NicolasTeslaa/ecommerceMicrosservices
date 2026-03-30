@@ -7,6 +7,8 @@ using ECommerce.Shared.Contracts;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 
+var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
@@ -45,7 +47,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
+
+if (!runningInContainer)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 

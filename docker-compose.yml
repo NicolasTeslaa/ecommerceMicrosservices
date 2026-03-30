@@ -1,7 +1,29 @@
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: ecommerce-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+    ports:
+      - "3306:3306"
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p12345678"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    volumes:
+      - mysql_data:/var/lib/mysql
+
   kafka:
     image: apache/kafka:3.9.1
     container_name: ecommerce-kafka
+    restart: unless-stopped
     ports:
       - "9092:9092"
       - "9094:9094"
@@ -20,14 +42,22 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
     volumes:
       - kafka_data:/var/lib/kafka/data
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: ecommerce-kafka-ui
+    restart: unless-stopped
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
@@ -35,5 +65,333 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_READONLY: "false"
 
+  bootstrap:
+    build:
+      context: .
+      dockerfile: Dockerfile.bootstrap
+    container_name: ecommerce-bootstrap
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD: 12345678
+      FORCE_CATALOG_SEED: "false"
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__AuthDb: server=mysql;port=3306;database=ecommerce-platform-auth;user=root;password=12345678
+      ConnectionStrings__CartDb: server=mysql;port=3306;database=ecommerce-plataform-cart;user=root;password=12345678
+      ConnectionStrings__CatalogWriteDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-write;user=root;password=12345678
+      ConnectionStrings__CatalogReadDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-read;user=root;password=12345678
+      ConnectionStrings__CustomerDb: server=mysql;port=3306;database=ecommerce-platform-customer;user=root;password=12345678
+      ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
+      ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
+      ConnectionStrings__PaymentDb: server=mysql;port=3306;database=ecommerce-platform-payment;user=root;password=12345678
+      ConnectionStrings__InventoryDb: server=mysql;port=3306;database=ecommerce-platform-inventory;user=root;password=12345678
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  auth-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/AuthService/Auth.API/Auth.API.csproj
+        PROJECT_DLL: Auth.API.dll
+    container_name: ecommerce-auth-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__AuthDb: server=mysql;port=3306;database=ecommerce-platform-auth;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5106:8080"
+
+  cart-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/CartService/Cart.API/Cart.API.csproj
+        PROJECT_DLL: Cart.API.dll
+    container_name: ecommerce-cart-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__CartDb: server=mysql;port=3306;database=ecommerce-plataform-cart;user=root;password=12345678
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    ports:
+      - "5102:8080"
+
+  catalog-read-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/CatalogService/Catalog.API.Read/Catalog.API.Read.csproj
+        PROJECT_DLL: Catalog.API.Read.dll
+    container_name: ecommerce-catalog-read-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_Kestrel__Endpoints__Http__Url: http://+:8080
+      ASPNETCORE_Kestrel__Endpoints__Http__Protocols: Http1
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Url: http://+:8081
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
+      ConnectionStrings__CatalogWriteDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-write;user=root;password=12345678
+      ConnectionStrings__CatalogReadDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-read;user=root;password=12345678
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    ports:
+      - "5101:8080"
+
+  catalog-write-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/CatalogService/Catalog.API.Write/Catalog.API.Write.csproj
+        PROJECT_DLL: Catalog.API.Write.dll
+    container_name: ecommerce-catalog-write-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__CatalogWriteDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-write;user=root;password=12345678
+      ConnectionStrings__CatalogReadDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-read;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5105:8080"
+
+  customer-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/CustomerService/Customer.API/Customer.API.csproj
+        PROJECT_DLL: Customer.API.dll
+    container_name: ecommerce-customer-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_Kestrel__Endpoints__Http__Url: http://+:8080
+      ASPNETCORE_Kestrel__Endpoints__Http__Protocols: Http1
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Url: http://+:8081
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
+      ConnectionStrings__CustomerDb: server=mysql;port=3306;database=ecommerce-platform-customer;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5107:8080"
+
+  inventory-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/InventoryService/Inventory.API/Inventory.API.csproj
+        PROJECT_DLL: Inventory.API.dll
+    container_name: ecommerce-inventory-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_Kestrel__Endpoints__Http__Url: http://+:8080
+      ASPNETCORE_Kestrel__Endpoints__Http__Protocols: Http1
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Url: http://+:8081
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
+      ConnectionStrings__InventoryDb: server=mysql;port=3306;database=ecommerce-platform-inventory;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+      CatalogService__BaseUrl: http://catalog-read-api:8080
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5111:8080"
+
+  order-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/OrderService/Order.API.Processor/Order.API.Processor.csproj
+        PROJECT_DLL: Order.API.Processor.dll
+    container_name: ecommerce-order-processor
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
+      ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+      CatalogService__BaseUrl: http://catalog-read-api:8081
+      CustomerService__BaseUrl: http://customer-api:8081
+      InventoryService__BaseUrl: http://inventory-api:8081
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+
+  order-read-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/OrderService/Order.API.Read/Order.API.Read.csproj
+        PROJECT_DLL: Order.API.Read.dll
+    container_name: ecommerce-order-read-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_Kestrel__Endpoints__Http__Url: http://+:8080
+      ASPNETCORE_Kestrel__Endpoints__Http__Protocols: Http1
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Url: http://+:8081
+      ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
+      ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
+      ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+      CustomerService__BaseUrl: http://customer-api:8080
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5103:8080"
+
+  order-write-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/OrderService/Order.API.Write/Order.API.Write.csproj
+        PROJECT_DLL: Order.API.Write.dll
+    container_name: ecommerce-order-write-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
+      ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+      CatalogService__BaseUrl: http://catalog-read-api:8081
+      CustomerService__BaseUrl: http://customer-api:8081
+      InventoryService__BaseUrl: http://inventory-api:8081
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5108:8080"
+
+  payment-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/PaymentService/Payment.API/Payment.API.csproj
+        PROJECT_DLL: Payment.API.dll
+    container_name: ecommerce-payment-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__PaymentDb: server=mysql;port=3306;database=ecommerce-platform-payment;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9092
+      OrderService__ReadBaseUrl: http://order-read-api:8081
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5110:8080"
+
+  shipping-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/ShippingService/Shipping.API/Shipping.API.csproj
+        PROJECT_DLL: Shipping.API.dll
+    container_name: ecommerce-shipping-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    ports:
+      - "5109:8080"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/gateway/ApiGateway/ApiGateway.csproj
+        PROJECT_DLL: ApiGateway.dll
+    container_name: ecommerce-api-gateway
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ReverseProxy__Clusters__catalog-read-cluster__Destinations__destination1__Address: http://catalog-read-api:8080/
+      ReverseProxy__Clusters__catalog-write-cluster__Destinations__destination1__Address: http://catalog-write-api:8080/
+      ReverseProxy__Clusters__cart-cluster__Destinations__destination1__Address: http://cart-api:8080/
+      ReverseProxy__Clusters__auth-cluster__Destinations__destination1__Address: http://auth-api:8080/
+      ReverseProxy__Clusters__customer-cluster__Destinations__destination1__Address: http://customer-api:8080/
+      ReverseProxy__Clusters__shipping-cluster__Destinations__destination1__Address: http://shipping-api:8080/
+      ReverseProxy__Clusters__order-read-cluster__Destinations__destination1__Address: http://order-read-api:8080/
+      ReverseProxy__Clusters__order-write-cluster__Destinations__destination1__Address: http://order-write-api:8080/
+      ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address: http://payment-api:8080/
+      ReverseProxy__Clusters__inventory-cluster__Destinations__destination1__Address: http://inventory-api:8080/
+    depends_on:
+      auth-api:
+        condition: service_started
+      cart-api:
+        condition: service_started
+      catalog-read-api:
+        condition: service_started
+      catalog-write-api:
+        condition: service_started
+      customer-api:
+        condition: service_started
+      inventory-api:
+        condition: service_started
+      order-read-api:
+        condition: service_started
+      order-write-api:
+        condition: service_started
+      payment-api:
+        condition: service_started
+      shipping-api:
+        condition: service_started
+    ports:
+      - "5100:8080"
+
 volumes:
   kafka_data:
+  mysql_data:
