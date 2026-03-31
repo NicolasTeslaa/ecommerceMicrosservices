@@ -6,13 +6,19 @@ MYSQL_HOST="${MYSQL_HOST:-mysql}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
 MYSQL_USER="${MYSQL_USER:-root}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-12345678}"
+MYSQL_READY_TIMEOUT="${MYSQL_READY_TIMEOUT:-300}"
 FORCE_CATALOG_SEED="${FORCE_CATALOG_SEED:-false}"
 
 export PATH="$PATH:/root/.dotnet/tools"
 
+log() {
+  printf '%s %s\n' "[$(date '+%Y-%m-%d %H:%M:%S')]" "$*"
+}
+
 mysql_exec() {
   mysql \
     --protocol=TCP \
+    --connect-timeout=5 \
     -h "$MYSQL_HOST" \
     -P "$MYSQL_PORT" \
     -u "$MYSQL_USER" \
@@ -21,17 +27,26 @@ mysql_exec() {
 }
 
 wait_for_mysql() {
-  echo "Waiting for MySQL at ${MYSQL_HOST}:${MYSQL_PORT}..."
+  log "Waiting for MySQL at ${MYSQL_HOST}:${MYSQL_PORT}..."
+
+  elapsed=0
 
   until mysql_exec -e "SELECT 1" >/dev/null 2>&1; do
+    if [ "$elapsed" -ge "$MYSQL_READY_TIMEOUT" ]; then
+      log "Timed out after ${MYSQL_READY_TIMEOUT}s waiting for MySQL."
+      exit 1
+    fi
+
+    log "MySQL is not ready yet. Retrying in 3s..."
     sleep 3
+    elapsed=$((elapsed + 3))
   done
 
-  echo "MySQL is available."
+  log "MySQL is available."
 }
 
 create_databases() {
-  echo "Ensuring application databases exist..."
+  log "Ensuring application databases exist..."
 
   mysql_exec -e "
     CREATE DATABASE IF NOT EXISTS \`ecommerce-platform-auth\`;
@@ -53,16 +68,18 @@ run_migration() {
   startup="$3"
   context="$4"
 
-  echo "Applying migrations for ${name}..."
+  log "Applying migrations for ${name}..."
   dotnet ef database update \
     --project "$project" \
     --startup-project "$startup" \
     --context "$context"
+  log "Finished migrations for ${name}."
 }
 
 run_migrations() {
-  echo "Restoring solution..."
-  dotnet restore "${ROOT_DIR}/ecommerce/ecommerce-platform.slnx"
+  log "Restoring solution..."
+  dotnet restore "${ROOT_DIR}/ecommerce/ecommerce-platform.slnx" --verbosity minimal
+  log "Solution restore finished."
 
   run_migration \
     "AuthService" \
@@ -136,8 +153,9 @@ should_seed_catalog() {
 }
 
 seed_catalog() {
-  echo "Loading catalog seed from seed-catalog-50k.sql..."
+  log "Loading catalog seed from seed-catalog-50k.sql..."
   mysql_exec < "${ROOT_DIR}/seed-catalog-50k.sql"
+  log "Catalog seed finished."
 }
 
 main() {
@@ -150,10 +168,10 @@ main() {
   if should_seed_catalog; then
     seed_catalog
   else
-    echo "Catalog seed skipped because products already exist. Set FORCE_CATALOG_SEED=true to reload it."
+    log "Catalog seed skipped because products already exist. Set FORCE_CATALOG_SEED=true to reload it."
   fi
 
-  echo "Bootstrap finished successfully."
+  log "Bootstrap finished successfully."
 }
 
 main "$@"

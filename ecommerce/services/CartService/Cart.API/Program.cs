@@ -2,10 +2,15 @@ using Cart.API.Middleware;
 using Cart.Application.Handlers;
 using Cart.Domain.Enums;
 using Cart.Infrastructure.Configuration;
+using Cart.Infrastructure.Persistence;
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddECommerceObservability("cart-api");
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -33,6 +38,12 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

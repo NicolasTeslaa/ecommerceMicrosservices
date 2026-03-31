@@ -164,6 +164,26 @@ O repositorio tambem contempla preocupacoes de engenharia importantes para uma a
 - testes automatizados em servicos ja mais evoluidos, como catalogo e carrinho;
 - estrutura preparada para expansao de novos dominios.
 
+## Bootstrap local no Visual Studio
+
+Se voce quiser deixar apenas o `Kafka` no Docker e subir o restante pelo Visual Studio, agora existe o projeto `ecommerce/tools/LocalBootstrap`.
+
+Ele replica o papel do container `bootstrap`:
+
+- garante que os bancos existam;
+- roda `dotnet ef database update` para todos os `DbContexts`;
+- aplica o seed do catalogo quando a tabela `products` estiver vazia.
+
+Fluxo sugerido no Visual Studio:
+
+1. suba o `Kafka` no Docker;
+2. configure `LocalBootstrap` como o primeiro startup project;
+3. configure as APIs que voce quer depurar como startup projects logo depois.
+
+O `LocalBootstrap` termina sozinho depois de preparar o banco, entao ele funciona bem como a primeira etapa do F5. Se voce quiser forcar a recarga do seed do catalogo, defina a variavel de ambiente `FORCE_CATALOG_SEED=true` nesse projeto.
+
+Se voce tambem quiser testar webhook da Stripe no mesmo F5, use o projeto `ecommerce/tools/StripeWebhookListener`. O perfil `Local + Kafka Docker` ja sobe esse listener e usa o profile `Payment.API (Stripe Local)`, que deixa `Stripe__WebhookSecret` vazio no ambiente local para aceitar os eventos encaminhados pela Stripe CLI.
+
 ## Escopo em expansao
 
 Ja existem pastas reservadas para a evolucao de outros dominios do e-commerce, como:

@@ -5,6 +5,10 @@
   <Folder Name="/spa/">
     <Project Path="spa/SpaLauncher/SpaLauncher.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/LocalBootstrap/LocalBootstrap.csproj" />
+    <Project Path="tools/StripeWebhookListener/StripeWebhookListener.csproj" />
+  </Folder>
   <Folder Name="/services/ShippingService/">
     <Project Path="services/ShippingService/Shipping.API/Shipping.API.csproj" />
     <Project Path="services/ShippingService/Shipping.Application/Shipping.Application.csproj" />
@@ -13,6 +17,7 @@
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/ECommerce.Shared/ECommerce.Shared.csproj" />
+    <Project Path="shared/ECommerce.Shared.Tests/ECommerce.Shared.Tests.csproj" />
   </Folder>
   <Folder Name="/services/" />
   <Folder Name="/services/AuthService/">

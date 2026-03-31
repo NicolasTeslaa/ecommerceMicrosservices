@@ -3,12 +3,17 @@ using Auth.API.Middleware;
 using Auth.Application.Handlers;
 using Auth.Domain.Enums;
 using Auth.Infrastructure.Configuration;
+using Auth.Infrastructure.Persistence;
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddECommerceObservability("auth-api");
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -59,6 +64,12 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

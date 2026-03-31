@@ -1,10 +1,13 @@
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Order.API.Common.Middleware;
 using Order.Application.Handlers;
 using Order.Domain.Enums;
 using Order.Infrastructure.Configuration;
+using Order.Infrastructure.Persistence;
 
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
@@ -14,6 +17,8 @@ if (runningInContainer)
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddECommerceObservability("order-write-api");
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -43,6 +48,15 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddInfrastructure(builder.Configuration, enableOutboxDispatcher: true);
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var writeDbContext = scope.ServiceProvider.GetRequiredService<OrderWriteDbContext>();
+    await writeDbContext.Database.MigrateAsync();
+
+    var readDbContext = scope.ServiceProvider.GetRequiredService<OrderReadDbContext>();
+    await readDbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

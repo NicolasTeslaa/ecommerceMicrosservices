@@ -4,4 +4,7 @@
 **/.vs/
 **/.idea/
 **/.git/
+.github/
+ecommerce/spa/
+**/TestResults/
 migration-logs/

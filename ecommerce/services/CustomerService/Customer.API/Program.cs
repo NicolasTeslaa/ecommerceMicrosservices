@@ -3,8 +3,11 @@ using Customer.API.Middleware;
 using Customer.Application.Handlers;
 using Customer.Domain.Enums;
 using Customer.Infrastructure.Configuration;
+using Customer.Infrastructure.Persistence;
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
@@ -14,6 +17,8 @@ if (!runningInContainer)
 {
     builder.WebHost.UseUrls("https://localhost:5107", "http://localhost:5117");
 }
+
+builder.AddECommerceObservability("customer-api");
 
 Console.WriteLine("Starting Customer.API host configuration...");
 
@@ -46,6 +51,12 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var app = builder.Build();
 
 Console.WriteLine("Customer.API host built successfully.");
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

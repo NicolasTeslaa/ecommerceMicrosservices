@@ -1,7 +1,9 @@
 using System.Text;
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Payment.API.Hubs;
 using Payment.API.Middleware;
@@ -9,6 +11,7 @@ using Payment.Application.Handlers;
 using Payment.Application.Interfaces;
 using Payment.Domain.Enums;
 using Payment.Infrastructure.Configuration;
+using Payment.Infrastructure.Persistence;
 
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
@@ -23,6 +26,8 @@ if (!runningInContainer)
 {
     builder.WebHost.UseUrls("https://localhost:5110", "http://localhost:5120");
 }
+
+builder.AddECommerceObservability("payment-api");
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
@@ -91,6 +96,12 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

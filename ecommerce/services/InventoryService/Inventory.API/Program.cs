@@ -1,10 +1,13 @@
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Inventory.API.Middleware;
 using Inventory.Application.Handlers;
 using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Grpc;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Inventory.Infrastructure.Persistence;
 
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
@@ -14,6 +17,8 @@ if (!runningInContainer)
 {
     builder.WebHost.UseUrls("https://localhost:5111", "http://localhost:5121");
 }
+
+builder.AddECommerceObservability("inventory-api");
 
 builder.Services.AddControllers();
 builder.Services.AddGrpc();
@@ -40,6 +45,12 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,9 +1,12 @@
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NotaFiscal.API.Middleware;
 using NotaFiscal.Application.Handlers;
 using NotaFiscal.Infrastructure.Configuration;
+using NotaFiscal.Infrastructure.Persistence;
 
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
@@ -13,6 +16,8 @@ if (!runningInContainer)
 {
     builder.WebHost.UseUrls("https://localhost:5112", "http://localhost:5122");
 }
+
+builder.AddECommerceObservability("nota-fiscal-api");
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -38,6 +43,12 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<NotaFiscalDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,6 +1,9 @@
 using System.Threading.RateLimiting;
+using ECommerce.Shared.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddECommerceObservability("api-gateway");
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

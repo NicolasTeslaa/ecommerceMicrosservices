@@ -58,3 +58,4 @@ docker-compose.override.yml
 **/Migrations/
 **/migrations/
 ecommerce/services/PaymentService/Payment.API/appsettings.json
+/temp

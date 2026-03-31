@@ -1,4 +1,5 @@
 using ECommerce.Shared.Contracts;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Mvc;
 using Shipping.API.Middleware;
 using Shipping.Application.Handlers;
@@ -8,6 +9,8 @@ using Shipping.Infrastructure.Configuration;
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddECommerceObservability("shipping-api");
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
