@@ -8,6 +8,7 @@ import type {
   CreateOrderPayload,
   CustomerAddress,
   InventoryAvailability,
+  Invoice,
   Payment,
   PaymentConfig,
   Order,
@@ -314,6 +315,13 @@ export const paymentService = {
 
   async getByOrderId(orderId: string): Promise<Payment | null> {
     const { data } = await backendApi.get<ApiResponse<Payment | null>>(`/api/payments/orders/${orderId}`);
+    return unwrap(data);
+  },
+};
+
+export const invoiceService = {
+  async getByOrderId(orderId: string): Promise<Invoice> {
+    const { data } = await backendApi.get<ApiResponse<Invoice>>(`/api/invoices/orders/${orderId}`);
     return unwrap(data);
   },
 };

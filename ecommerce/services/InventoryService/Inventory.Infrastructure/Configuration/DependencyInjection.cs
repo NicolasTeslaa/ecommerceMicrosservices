@@ -20,6 +20,8 @@ public static class DependencyInjection
 
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<IInventoryEventPublisher, KafkaInventoryEventPublisher>();
+        services.AddScoped<PaymentApprovedMessageProcessor>();
+        services.AddScoped<PaymentFailedMessageProcessor>();
         services.AddHttpClient("catalog-read", client =>
         {
             client.BaseAddress = new Uri(configuration["CatalogService:BaseUrl"] ?? "https://localhost:5101");

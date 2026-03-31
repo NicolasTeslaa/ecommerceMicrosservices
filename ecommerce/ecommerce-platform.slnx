@@ -52,6 +52,13 @@
     <Project Path="services/InventoryService/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
     <Project Path="services/InventoryService/Inventory.Tests/Inventory.Tests.csproj" />
   </Folder>
+  <Folder Name="/services/NotaFiscalService/">
+    <Project Path="services/NotaFiscalService/NotaFiscal.API/NotaFiscal.API.csproj" />
+    <Project Path="services/NotaFiscalService/NotaFiscal.Application/NotaFiscal.Application.csproj" />
+    <Project Path="services/NotaFiscalService/NotaFiscal.Domain/NotaFiscal.Domain.csproj" />
+    <Project Path="services/NotaFiscalService/NotaFiscal.Infrastructure/NotaFiscal.Infrastructure.csproj" />
+    <Project Path="services/NotaFiscalService/NotaFiscal.Tests/NotaFiscal.Tests.csproj" />
+  </Folder>
   <Folder Name="/services/NotificationService/" />
   <Folder Name="/services/OrderService/">
     <Project Path="services/OrderService/Order.API.Common/Order.API.Common.csproj" />

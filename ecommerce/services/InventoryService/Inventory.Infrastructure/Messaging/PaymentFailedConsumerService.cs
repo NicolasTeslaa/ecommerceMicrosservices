@@ -1,11 +1,6 @@
 using System.Text.Json;
 using Confluent.Kafka;
 using ECommerce.Shared.Messaging;
-using Inventory.Application.Interfaces;
-using Inventory.Domain.Entities;
-using Inventory.Domain.Enums;
-using Inventory.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -58,46 +53,22 @@ public class PaymentFailedConsumerService : BackgroundService
                     continue;
 
                 using var scope = _serviceScopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-                var repository = scope.ServiceProvider.GetRequiredService<IInventoryRepository>();
-
-                var alreadyProcessed = await dbContext.ProcessedKafkaMessages.AnyAsync(
-                    item => item.Topic == result.Topic
-                        && item.Partition == result.Partition.Value
-                        && item.Offset == result.Offset.Value,
-                    stoppingToken);
-
-                if (alreadyProcessed)
-                {
-                    consumer.Commit(result);
-                    continue;
-                }
+                var processor = scope.ServiceProvider.GetRequiredService<PaymentFailedMessageProcessor>();
 
                 var integrationEvent = JsonSerializer.Deserialize<PaymentFailedIntegrationEvent>(result.Message.Value);
                 if (integrationEvent is null)
                     continue;
 
-                if (integrationEvent.MaxAttemptsReached)
-                {
-                    var reservations = await repository.GetReservationsByOrderIdAsync(integrationEvent.OrderId, stoppingToken);
-                    var items = await repository.GetItemsByProductIdsAsync(reservations.Select(item => item.ProductId).Distinct().ToArray(), stoppingToken);
-                    var itemsByProductId = items.ToDictionary(item => item.ProductId);
-
-                    foreach (var reservation in reservations.Where(item => item.Status == InventoryReservationStatus.Pending))
-                    {
-                        if (!itemsByProductId.TryGetValue(reservation.ProductId, out var inventoryItem))
-                            continue;
-
-                        inventoryItem.ReleaseReservation(reservation.Quantity);
-                        reservation.Release();
-                    }
-                }
-
-                await dbContext.ProcessedKafkaMessages.AddAsync(
-                    new ProcessedKafkaMessage(result.Topic, result.Partition.Value, result.Offset.Value, groupId),
+                var processed = await processor.ProcessAsync(
+                    integrationEvent,
+                    result.Topic,
+                    result.Partition.Value,
+                    result.Offset.Value,
+                    groupId,
                     stoppingToken);
-                await repository.SaveChangesAsync(stoppingToken);
-                consumer.Commit(result);
+
+                if (processed)
+                    consumer.Commit(result);
             }
             catch (OperationCanceledException)
             {

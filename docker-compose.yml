@@ -1,22 +1,16 @@
 services:
   mysql:
-    image: mysql:8.4
+    image: mysql:8.0.41
     container_name: ecommerce-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: 12345678
     ports:
-      - "3306:3306"
+      - "3308:3306"
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p12345678"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 20s
     volumes:
       - mysql_data:/var/lib/mysql
 
@@ -25,17 +19,16 @@ services:
     container_name: ecommerce-kafka
     restart: unless-stopped
     ports:
-      - "9092:9092"
       - "9094:9094"
     environment:
       KAFKA_NODE_ID: "1"
       KAFKA_PROCESS_ROLES: "broker,controller"
-      KAFKA_LISTENERS: "PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_LISTENERS: "CONTROLLER://localhost:9091,DOCKER://:9093,HOST://:9094"
+      KAFKA_ADVERTISED_LISTENERS: "DOCKER://kafka:9093,HOST://localhost:9094"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
-      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT,HOST:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "DOCKER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9091"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
@@ -43,7 +36,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: "1"
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9093 --list >/dev/null 2>&1"]
       interval: 15s
       timeout: 10s
       retries: 20
@@ -62,7 +55,7 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: ecommerce-local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093
       KAFKA_CLUSTERS_0_READONLY: "false"
 
   bootstrap:
@@ -86,9 +79,10 @@ services:
       ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
       ConnectionStrings__PaymentDb: server=mysql;port=3306;database=ecommerce-platform-payment;user=root;password=12345678
       ConnectionStrings__InventoryDb: server=mysql;port=3306;database=ecommerce-platform-inventory;user=root;password=12345678
+      ConnectionStrings__NotaFiscalDb: server=mysql;port=3306;database=ecommerce-platform-nota-fiscal;user=root;password=12345678
     depends_on:
       mysql:
-        condition: service_healthy
+        condition: service_started
 
   auth-api:
     build:
@@ -103,7 +97,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Docker
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__AuthDb: server=mysql;port=3306;database=ecommerce-platform-auth;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -168,7 +162,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__CatalogWriteDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-write;user=root;password=12345678
       ConnectionStrings__CatalogReadDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-read;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -193,7 +187,7 @@ services:
       ASPNETCORE_Kestrel__Endpoints__Grpc__Url: http://+:8081
       ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
       ConnectionStrings__CustomerDb: server=mysql;port=3306;database=ecommerce-platform-customer;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -218,7 +212,7 @@ services:
       ASPNETCORE_Kestrel__Endpoints__Grpc__Url: http://+:8081
       ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
       ConnectionStrings__InventoryDb: server=mysql;port=3306;database=ecommerce-platform-inventory;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
       CatalogService__BaseUrl: http://catalog-read-api:8080
     depends_on:
       bootstrap:
@@ -242,7 +236,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
       ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
       CatalogService__BaseUrl: http://catalog-read-api:8081
       CustomerService__BaseUrl: http://customer-api:8081
       InventoryService__BaseUrl: http://inventory-api:8081
@@ -269,7 +263,7 @@ services:
       ASPNETCORE_Kestrel__Endpoints__Grpc__Protocols: Http2
       ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
       ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
       CustomerService__BaseUrl: http://customer-api:8080
     depends_on:
       bootstrap:
@@ -293,7 +287,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
       ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
       CatalogService__BaseUrl: http://catalog-read-api:8081
       CustomerService__BaseUrl: http://customer-api:8081
       InventoryService__BaseUrl: http://inventory-api:8081
@@ -318,7 +312,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Docker
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__PaymentDb: server=mysql;port=3306;database=ecommerce-platform-payment;user=root;password=12345678
-      Kafka__BootstrapServers: kafka:9092
+      Kafka__BootstrapServers: kafka:9093
       OrderService__ReadBaseUrl: http://order-read-api:8081
     depends_on:
       bootstrap:
@@ -327,6 +321,28 @@ services:
         condition: service_healthy
     ports:
       - "5110:8080"
+
+  nota-fiscal-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/NotaFiscalService/NotaFiscal.API/NotaFiscal.API.csproj
+        PROJECT_DLL: NotaFiscal.API.dll
+    container_name: ecommerce-nota-fiscal-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__NotaFiscalDb: server=mysql;port=3306;database=ecommerce-platform-nota-fiscal;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9093
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5112:8080"
 
   shipping-api:
     build:
@@ -356,6 +372,7 @@ services:
     container_name: ecommerce-api-gateway
     restart: unless-stopped
     environment:
+      DOTNET_ENVIRONMENT: Docker
       ASPNETCORE_ENVIRONMENT: Docker
       ASPNETCORE_URLS: http://+:8080
       ReverseProxy__Clusters__catalog-read-cluster__Destinations__destination1__Address: http://catalog-read-api:8080/
@@ -368,6 +385,7 @@ services:
       ReverseProxy__Clusters__order-write-cluster__Destinations__destination1__Address: http://order-write-api:8080/
       ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address: http://payment-api:8080/
       ReverseProxy__Clusters__inventory-cluster__Destinations__destination1__Address: http://inventory-api:8080/
+      ReverseProxy__Clusters__invoice-cluster__Destinations__destination1__Address: http://nota-fiscal-api:8080/
     depends_on:
       auth-api:
         condition: service_started
@@ -386,6 +404,8 @@ services:
       order-write-api:
         condition: service_started
       payment-api:
+        condition: service_started
+      nota-fiscal-api:
         condition: service_started
       shipping-api:
         condition: service_started

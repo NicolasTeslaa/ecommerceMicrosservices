@@ -26,11 +26,11 @@ public class OrderProcessorConsumerServiceTests
 
         var readModelProjectorMock = new Mock<IOrderReadModelProjector>();
         var customerAddressClientMock = new Mock<ICustomerAddressValidationClient>();
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var eventPublisherMock = new Mock<IOrderEventPublisher>();
 
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = false,
@@ -52,7 +52,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             readModelProjectorMock.Object,
             customerAddressClientMock.Object,
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             eventPublisherMock.Object);
 
         var service = CreateProcessorService();
@@ -90,11 +90,11 @@ public class OrderProcessorConsumerServiceTests
 
         var readModelProjectorMock = new Mock<IOrderReadModelProjector>();
         var customerAddressClientMock = new Mock<ICustomerAddressValidationClient>();
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var eventPublisherMock = new Mock<IOrderEventPublisher>();
 
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = false,
@@ -116,7 +116,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             readModelProjectorMock.Object,
             customerAddressClientMock.Object,
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             eventPublisherMock.Object);
 
         var service = CreateProcessorService();
@@ -138,11 +138,11 @@ public class OrderProcessorConsumerServiceTests
 
         var readModelProjectorMock = new Mock<IOrderReadModelProjector>();
         var customerAddressClientMock = new Mock<ICustomerAddressValidationClient>();
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var eventPublisherMock = new Mock<IOrderEventPublisher>();
 
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = true,
@@ -157,7 +157,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             readModelProjectorMock.Object,
             customerAddressClientMock.Object,
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             eventPublisherMock.Object);
 
         var service = CreateProcessorService();
@@ -190,11 +190,11 @@ public class OrderProcessorConsumerServiceTests
 
         var readModelProjectorMock = new Mock<IOrderReadModelProjector>();
         var customerAddressClientMock = new Mock<ICustomerAddressValidationClient>();
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var eventPublisherMock = new Mock<IOrderEventPublisher>();
 
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = true,
@@ -215,7 +215,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             readModelProjectorMock.Object,
             customerAddressClientMock.Object,
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             eventPublisherMock.Object);
 
         var service = CreateProcessorService();
@@ -247,11 +247,11 @@ public class OrderProcessorConsumerServiceTests
 
         var readModelProjectorMock = new Mock<IOrderReadModelProjector>();
         var customerAddressClientMock = new Mock<ICustomerAddressValidationClient>();
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var eventPublisherMock = new Mock<IOrderEventPublisher>();
 
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = true,
@@ -262,7 +262,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             readModelProjectorMock.Object,
             customerAddressClientMock.Object,
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             eventPublisherMock.Object);
 
         var service = CreateProcessorService();
@@ -291,11 +291,11 @@ public class OrderProcessorConsumerServiceTests
 
         var readModelProjectorMock = new Mock<IOrderReadModelProjector>();
         var customerAddressClientMock = new Mock<ICustomerAddressValidationClient>();
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var eventPublisherMock = new Mock<IOrderEventPublisher>();
 
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = true,
@@ -320,7 +320,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             readModelProjectorMock.Object,
             customerAddressClientMock.Object,
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             eventPublisherMock.Object);
 
         var service = CreateProcessorService();
@@ -348,7 +348,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             Mock.Of<IOrderReadModelProjector>(),
             Mock.Of<ICustomerAddressValidationClient>(),
-            Mock.Of<ICatalogProductAvailabilityClient>(),
+            Mock.Of<IInventoryOrderReservationClient>(),
             Mock.Of<IOrderEventPublisher>());
 
         var service = CreateProcessorService();
@@ -367,7 +367,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             Mock.Of<IOrderReadModelProjector>(),
             Mock.Of<ICustomerAddressValidationClient>(),
-            Mock.Of<ICatalogProductAvailabilityClient>(),
+            Mock.Of<IInventoryOrderReservationClient>(),
             Mock.Of<IOrderEventPublisher>());
 
         var service = CreateProcessorService();
@@ -386,12 +386,12 @@ public class OrderProcessorConsumerServiceTests
         outbox.MarkAsProcessed();
         await writeDbContext.SaveChangesAsync();
 
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
         var provider = BuildProvider(
             writeDbContext,
             Mock.Of<IOrderReadModelProjector>(),
             Mock.Of<ICustomerAddressValidationClient>(),
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             Mock.Of<IOrderEventPublisher>());
 
         var service = CreateProcessorService();
@@ -399,8 +399,8 @@ public class OrderProcessorConsumerServiceTests
         await InvokeProcessMessageAsync(service, provider, outbox.Id);
 
         Assert.Empty(writeDbContext.Orders);
-        catalogAvailabilityClientMock.Verify(
-            client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()),
+        inventoryOrderReservationClientMock.Verify(
+            client => client.ReserveAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -425,9 +425,9 @@ public class OrderProcessorConsumerServiceTests
         await writeDbContext.Orders.AddAsync(existingRejectedOrder);
         var outbox = await SeedOutboxAsync(writeDbContext, request);
 
-        var catalogAvailabilityClientMock = new Mock<ICatalogProductAvailabilityClient>();
-        catalogAvailabilityClientMock
-            .Setup(client => client.ValidateAsync(It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
+        var inventoryOrderReservationClientMock = new Mock<IInventoryOrderReservationClient>();
+        inventoryOrderReservationClientMock
+            .Setup(client => client.ReserveAsync(request.OrderId, request.CustomerId, It.IsAny<IReadOnlyCollection<ProductAvailabilityCheckItemDto>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductAvailabilityValidationResultDto
             {
                 IsValid = false,
@@ -449,7 +449,7 @@ public class OrderProcessorConsumerServiceTests
             writeDbContext,
             Mock.Of<IOrderReadModelProjector>(),
             Mock.Of<ICustomerAddressValidationClient>(),
-            catalogAvailabilityClientMock.Object,
+            inventoryOrderReservationClientMock.Object,
             Mock.Of<IOrderEventPublisher>());
 
         var service = CreateProcessorService();
@@ -496,14 +496,14 @@ public class OrderProcessorConsumerServiceTests
         OrderWriteDbContext writeDbContext,
         IOrderReadModelProjector readModelProjector,
         ICustomerAddressValidationClient customerAddressValidationClient,
-        ICatalogProductAvailabilityClient catalogProductAvailabilityClient,
+        IInventoryOrderReservationClient inventoryOrderReservationClient,
         IOrderEventPublisher eventPublisher)
     {
         var services = new ServiceCollection();
         services.AddSingleton(writeDbContext);
         services.AddSingleton(readModelProjector);
         services.AddSingleton(customerAddressValidationClient);
-        services.AddSingleton(catalogProductAvailabilityClient);
+        services.AddSingleton(inventoryOrderReservationClient);
         services.AddSingleton(eventPublisher);
         return services.BuildServiceProvider();
     }

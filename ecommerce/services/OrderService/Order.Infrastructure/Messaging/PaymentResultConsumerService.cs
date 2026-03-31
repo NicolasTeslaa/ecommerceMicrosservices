@@ -83,6 +83,7 @@ public class PaymentResultConsumerService : BackgroundService
     {
         var writeDbContext = serviceProvider.GetRequiredService<OrderWriteDbContext>();
         var readModelProjector = serviceProvider.GetRequiredService<IOrderReadModelProjector>();
+        var eventPublisher = serviceProvider.GetRequiredService<IOrderEventPublisher>();
 
         if (topic == (_configuration["Kafka:PaymentApprovedTopic"] ?? "payment.approved"))
         {
@@ -101,6 +102,7 @@ public class PaymentResultConsumerService : BackgroundService
             order.MarkConfirmed();
             await writeDbContext.SaveChangesAsync(cancellationToken);
             await readModelProjector.ProjectAsync(order, cancellationToken);
+            await eventPublisher.PublishOrderConfirmedAsync(order, cancellationToken);
             return;
         }
 

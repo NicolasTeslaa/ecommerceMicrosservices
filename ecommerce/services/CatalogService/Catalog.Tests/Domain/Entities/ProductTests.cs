@@ -137,44 +137,6 @@ public class ProductTests
     }
 
     [Fact]
-    public void Constructor_ShouldThrowInvalidStockQuantityException_WhenStockQuantityIsZero()
-    {
-        // Arrange / Act
-        var act = () => new Product(
-            "Produto",
-            "Descrição",
-            100m,
-            Guid.NewGuid(),
-            HeightCm,
-            WidthCm,
-            CubageM3,
-            WeightKg,
-            OriginZipCode);
-
-        // Assert
-        Assert.Throws<InvalidStockQuantityException>(act);
-    }
-
-    [Fact]
-    public void Constructor_ShouldThrowInvalidStockQuantityException_WhenStockQuantityIsNegative()
-    {
-        // Arrange / Act
-        var act = () => new Product(
-            "Produto",
-            "Descrição",
-            100m,
-            Guid.NewGuid(),
-            HeightCm,
-            WidthCm,
-            CubageM3,
-            WeightKg,
-            OriginZipCode);
-
-        // Assert
-        Assert.Throws<InvalidStockQuantityException>(act);
-    }
-
-    [Fact]
     public void Constructor_ShouldThrowInvalidCategoryIdException_WhenCategoryIdIsEmpty()
     {
         // Arrange / Act
@@ -326,37 +288,6 @@ public class ProductTests
 
         // Assert
         Assert.Throws<InvalidProductPriceException>(act);
-    }
-
-    [Fact]
-    public void Update_ShouldThrowInvalidStockQuantityException_WhenStockQuantityIsInvalid()
-    {
-        // Arrange
-        var product = new Product(
-            "Produto",
-            "Descrição",
-            100m,
-            Guid.NewGuid(),
-            HeightCm,
-            WidthCm,
-            CubageM3,
-            WeightKg,
-            OriginZipCode);
-
-        // Act
-        var act = () => product.Update(
-            "Produto atualizado",
-            "Nova descrição",
-            200m,
-            Guid.NewGuid(),
-            HeightCm,
-            WidthCm,
-            CubageM3,
-            WeightKg,
-            OriginZipCode);
-
-        // Assert
-        Assert.Throws<InvalidStockQuantityException>(act);
     }
 
     [Fact]

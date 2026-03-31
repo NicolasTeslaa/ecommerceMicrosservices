@@ -63,6 +63,50 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
             cancellationToken);
     }
 
+    public async Task PublishOrderConfirmedAsync(Order.Domain.Entities.Order order, CancellationToken cancellationToken = default)
+    {
+        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
+
+        if (string.IsNullOrWhiteSpace(bootstrapServers))
+            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for OrderService.");
+
+        var topic = _configuration["Kafka:OrderConfirmedTopic"] ?? "order.confirmed";
+        var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
+
+        var integrationEvent = new OrderConfirmedIntegrationEvent
+        {
+            OrderId = order.Id,
+            CustomerId = order.CustomerId,
+            CustomerAddressId = order.CustomerAddressId,
+            CustomerEmail = order.CustomerEmail,
+            ShippingAmount = order.ShippingAmount,
+            TotalAmount = order.TotalAmount,
+            Currency = "brl",
+            Status = order.Status.ToString(),
+            ConfirmedAtUtc = DateTime.UtcNow,
+            Items = order.Items
+                .Select(item => new OrderConfirmedIntegrationEventItem
+                {
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    UnitPrice = item.UnitPrice,
+                    Quantity = item.Quantity,
+                    TotalPrice = item.TotalPrice
+                })
+                .ToArray()
+        };
+
+        using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+        await producer.ProduceAsync(
+            topic,
+            new Message<string, string>
+            {
+                Key = order.Id.ToString(),
+                Value = JsonSerializer.Serialize(integrationEvent)
+            },
+            cancellationToken);
+    }
+
     public async Task PublishOrderRejectedAsync(
         Guid orderId,
         Guid customerId,

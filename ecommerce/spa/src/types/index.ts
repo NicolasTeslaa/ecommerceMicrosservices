@@ -227,6 +227,20 @@ export interface Payment {
   updatedAtUtc: string;
 }
 
+export interface Invoice {
+  id: string;
+  orderId: string;
+  customerId: string;
+  number: number;
+  series: string;
+  accessKey: string;
+  xmlContent: string;
+  status: 'Issued' | string;
+  totalAmount: number;
+  currency: string;
+  issuedAtUtc: string;
+}
+
 export interface InventoryAvailability {
   productId: string;
   availableQuantity: number;

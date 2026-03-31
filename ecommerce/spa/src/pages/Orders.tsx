@@ -1,11 +1,12 @@
+import axios from 'axios';
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronDown, Loader2, Package, ShoppingBag } from 'lucide-react';
+import { ChevronDown, Download, Loader2, Package, ShoppingBag } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePagedOrders } from '@/hooks/useData';
 import { useAuth } from '@/store/useAuth';
-import { orderService } from '@/services/backendApi';
+import { invoiceService, orderService } from '@/services/backendApi';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 import {
@@ -67,6 +68,7 @@ const Orders = () => {
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const [currentPage, setCurrentPage] = useState(1);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [downloadingInvoiceOrderId, setDownloadingInvoiceOrderId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data, isLoading, isFetching } = usePagedOrders(customerId, currentPage, ORDERS_PER_PAGE);
 
@@ -91,6 +93,34 @@ const Orders = () => {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel cancelar o pedido.');
     } finally {
       setCancellingOrderId(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (orderId: string) => {
+    if (downloadingInvoiceOrderId) return;
+
+    setDownloadingInvoiceOrderId(orderId);
+
+    try {
+      const invoice = await invoiceService.getByOrderId(orderId);
+      const blob = new Blob([invoice.xmlContent], { type: 'application/xml;charset=utf-8' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = `nota-fiscal-${invoice.number}-pedido-${invoice.orderId}.xml`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      toast.success('Nota fiscal baixada com sucesso.');
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        toast.error('A nota fiscal ainda nao foi emitida para este pedido.');
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Nao foi possivel baixar a nota fiscal.');
+      }
+    } finally {
+      setDownloadingInvoiceOrderId(null);
     }
   };
 
@@ -180,6 +210,7 @@ const Orders = () => {
                     const normalizedStatus = typeof order.status === 'string' ? order.status : String(order.status);
                     const canPayNow = normalizedStatus === 'PendingPayment' || normalizedStatus === 'Pending' || normalizedStatus === '1';
                     const canCancel = canPayNow;
+                    const canDownloadInvoice = normalizedStatus === 'Confirmed' || normalizedStatus === '2';
 
                     return (
                   <details className="group rounded-3xl glass-panel overflow-hidden">
@@ -211,7 +242,7 @@ const Orders = () => {
                         </div>
                     </div>
 
-                    {(canPayNow || canCancel) && (
+                    {(canPayNow || canCancel || canDownloadInvoice) && (
                       <div className="flex flex-wrap items-center gap-2">
                         {canPayNow && (
                           <Link
@@ -235,6 +266,25 @@ const Orders = () => {
                           >
                             {cancellingOrderId === order.id ? <Loader2 size={14} className="animate-spin" /> : null}
                             Cancelar pedido
+                          </button>
+                        )}
+                        {canDownloadInvoice && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleDownloadInvoice(order.id);
+                            }}
+                            disabled={downloadingInvoiceOrderId === order.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/70 px-4 py-2 text-sm font-medium text-foreground disabled:opacity-60"
+                          >
+                            {downloadingInvoiceOrderId === order.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Download size={14} />
+                            )}
+                            Baixar nota fiscal
                           </button>
                         )}
                       </div>

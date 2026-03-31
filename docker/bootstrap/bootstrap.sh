@@ -43,6 +43,7 @@ create_databases() {
     CREATE DATABASE IF NOT EXISTS \`ecommerce-platform-order-read\`;
     CREATE DATABASE IF NOT EXISTS \`ecommerce-platform-payment\`;
     CREATE DATABASE IF NOT EXISTS \`ecommerce-platform-inventory\`;
+    CREATE DATABASE IF NOT EXISTS \`ecommerce-platform-nota-fiscal\`;
   "
 }
 
@@ -116,6 +117,12 @@ run_migrations() {
     "${ROOT_DIR}/ecommerce/services/InventoryService/Inventory.Infrastructure/Inventory.Infrastructure.csproj" \
     "${ROOT_DIR}/ecommerce/services/InventoryService/Inventory.API/Inventory.API.csproj" \
     "InventoryDbContext"
+
+  run_migration \
+    "NotaFiscalService" \
+    "${ROOT_DIR}/ecommerce/services/NotaFiscalService/NotaFiscal.Infrastructure/NotaFiscal.Infrastructure.csproj" \
+    "${ROOT_DIR}/ecommerce/services/NotaFiscalService/NotaFiscal.API/NotaFiscal.API.csproj" \
+    "NotaFiscalDbContext"
 }
 
 should_seed_catalog() {
