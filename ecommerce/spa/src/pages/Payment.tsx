@@ -233,7 +233,7 @@ const PaymentPage = () => {
     if (lastOrder?.orderId === orderId) {
       setLastOrder({
         ...lastOrder,
-        status: 'approved',
+        status: 'processing',
       });
     }
 
@@ -250,17 +250,19 @@ const PaymentPage = () => {
   }
 
   if (!payment) {
+    const shouldShowProcessingFallback = lastOrder?.orderId === orderId;
+
     return (
       <div className="min-h-screen pt-24 flex flex-col items-center justify-center gap-4 px-4">
         <h2 className="text-2xl font-display font-bold">
-          {waitingForPayment ? 'Preparando pagamento' : 'Pagamento nao encontrado'}
+          {waitingForPayment || shouldShowProcessingFallback ? 'Pagamento em processamento' : 'Pagamento nao encontrado'}
         </h2>
         <p className="text-muted-foreground text-sm text-center max-w-md">
-          {waitingForPayment
-            ? 'Recebemos o pedido e estamos aguardando o PaymentService criar a sessao da Stripe. Isso costuma levar alguns segundos.'
+          {waitingForPayment || shouldShowProcessingFallback
+            ? 'Seu pagamento sera processado e te informaremos no email assim que houver uma atualizacao.'
             : 'Nao foi possivel localizar o pagamento para este pedido.'}
         </p>
-        {!waitingForPayment && (
+        {!(waitingForPayment || shouldShowProcessingFallback) && (
           <Link to="/orders" className="text-primary text-sm hover:underline">Ir para meus pedidos</Link>
         )}
       </div>

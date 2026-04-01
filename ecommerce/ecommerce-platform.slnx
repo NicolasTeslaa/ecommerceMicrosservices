@@ -14,6 +14,7 @@
     <Project Path="services/ShippingService/Shipping.Application/Shipping.Application.csproj" />
     <Project Path="services/ShippingService/Shipping.Domain/Shipping.Domain.csproj" />
     <Project Path="services/ShippingService/Shipping.Infrastructure/Shipping.Infrastructure.csproj" />
+    <Project Path="services/ShippingService/Shipping.Tests/Shipping.Tests.csproj" />
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/ECommerce.Shared/ECommerce.Shared.csproj" />

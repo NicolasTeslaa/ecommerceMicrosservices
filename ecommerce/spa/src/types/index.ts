@@ -199,7 +199,7 @@ export interface OrderConfirmation {
   items: CartItem[];
   total: number;
   paymentMethod: string;
-  status: 'approved' | 'pending';
+  status: 'approved' | 'pending' | 'processing';
   date: string;
   shippingAmount?: number;
   shippingAddress?: string;

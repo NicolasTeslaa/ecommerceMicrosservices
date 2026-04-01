@@ -17,6 +17,16 @@ const Confirmation = () => {
     );
   }
 
+  const isApproved = lastOrder.status === 'approved';
+  const isProcessing = lastOrder.status === 'processing';
+  const statusLabel = isApproved ? 'Aprovado' : isProcessing ? 'Em processamento' : 'Pendente';
+  const statusDotClass = isApproved ? 'bg-emerald-500' : isProcessing ? 'bg-amber-500' : 'bg-primary';
+  const statusTextClass = isApproved ? 'text-emerald-500' : isProcessing ? 'text-amber-500' : 'text-primary';
+  const title = isProcessing ? 'Pagamento em Processamento' : 'Pedido Recebido!';
+  const description = isProcessing
+    ? 'Seu pagamento sera processado e te informaremos no email assim que houver uma atualizacao.'
+    : 'Seu pedido sera processado em instantes e voce sera notificado apos a conclusao';
+
   return (
     <div className="min-h-screen pt-24 lg:pt-28 pb-12 px-4 bg-gradient-hero relative">
       <div className="absolute inset-0 bg-background/80" />
@@ -36,10 +46,10 @@ const Confirmation = () => {
             <CheckCircle size={40} className="text-emerald-500" />
           </motion.div>
           <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight mb-2">
-            Pedido Recebido!
+            {title}
           </h1>
           <p className="text-muted-foreground">
-            Seu pedido sera processado em instantes e voce sera notificado apos a conclusao
+            {description}
           </p>
         </motion.div>
 
@@ -57,9 +67,9 @@ const Confirmation = () => {
             </div>
             <div>
               <p className="text-xs font-mono text-muted-foreground uppercase">Status</p>
-              <p className="text-emerald-500 font-medium mt-1 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                {lastOrder.status === 'approved' ? 'Aprovado' : 'Pendente'}
+              <p className={`${statusTextClass} font-medium mt-1 flex items-center gap-1`}>
+                <span className={`w-2 h-2 rounded-full ${statusDotClass}`} />
+                {statusLabel}
               </p>
             </div>
             <div>
