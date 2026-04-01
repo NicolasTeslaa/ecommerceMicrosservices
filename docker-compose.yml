@@ -93,6 +93,7 @@ services:
       ConnectionStrings__CatalogWriteDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-write;user=root;password=12345678
       ConnectionStrings__CatalogReadDb: server=mysql;port=3306;database=ecommerce-plataform-catalog-read;user=root;password=12345678
       ConnectionStrings__CustomerDb: server=mysql;port=3306;database=ecommerce-platform-customer;user=root;password=12345678
+      ConnectionStrings__ExpeditionDb: server=mysql;port=3306;database=ecommerce-platform-expedition;user=root;password=12345678
       ConnectionStrings__OrderWriteDb: server=mysql;port=3306;database=ecommerce-platform-order-write;user=root;password=12345678
       ConnectionStrings__OrderReadDb: server=mysql;port=3306;database=ecommerce-platform-order-read;user=root;password=12345678
       ConnectionStrings__PaymentDb: server=mysql;port=3306;database=ecommerce-platform-payment;user=root;password=12345678
@@ -225,6 +226,30 @@ services:
         condition: service_healthy
     ports:
       - "5107:8080"
+
+  expedition-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/ExpeditionService/Expedition.API/Expedition.API.csproj
+        PROJECT_DLL: Expedition.API.dll
+    container_name: ecommerce-expedition-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      ConnectionStrings__ExpeditionDb: server=mysql;port=3306;database=ecommerce-platform-expedition;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9093
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5113:8080"
 
   inventory-api:
     build:
@@ -432,6 +457,7 @@ services:
       ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address: http://payment-api:8080/
       ReverseProxy__Clusters__inventory-cluster__Destinations__destination1__Address: http://inventory-api:8080/
       ReverseProxy__Clusters__invoice-cluster__Destinations__destination1__Address: http://nota-fiscal-api:8080/
+      ReverseProxy__Clusters__expedition-cluster__Destinations__destination1__Address: http://expedition-api:8080/
     depends_on:
       auth-api:
         condition: service_started
@@ -452,6 +478,8 @@ services:
       payment-api:
         condition: service_started
       nota-fiscal-api:
+        condition: service_started
+      expedition-api:
         condition: service_started
       shipping-api:
         condition: service_started

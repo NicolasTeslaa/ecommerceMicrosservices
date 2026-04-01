@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Expedition.API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54390;http://localhost:54391"
+    }
+  }
+}

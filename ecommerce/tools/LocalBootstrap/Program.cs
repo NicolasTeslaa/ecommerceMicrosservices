@@ -46,6 +46,13 @@ var services = new[]
         AppSettingsRelativePath: @"ecommerce\services\CustomerService\Customer.API\appsettings.json",
         ConnectionStringName: "CustomerDb"),
     new BootstrapTarget(
+        Name: "ExpeditionService",
+        StartupProjectRelativePath: @"ecommerce\services\ExpeditionService\Expedition.API\Expedition.API.csproj",
+        ProjectRelativePath: @"ecommerce\services\ExpeditionService\Expedition.Infrastructure\Expedition.Infrastructure.csproj",
+        ContextName: "ExpeditionDbContext",
+        AppSettingsRelativePath: @"ecommerce\services\ExpeditionService\Expedition.API\appsettings.json",
+        ConnectionStringName: "ExpeditionDb"),
+    new BootstrapTarget(
         Name: "OrderService Write",
         StartupProjectRelativePath: @"ecommerce\services\OrderService\Order.API.Write\Order.API.Write.csproj",
         ProjectRelativePath: @"ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj",
@@ -284,6 +291,11 @@ static string[] ResolveKafkaTopics() =>
     [
         "auth.user-registered",
         "catalog.product-created",
+        "expedition.awaiting-carrier-pickup",
+        "expedition.delivery-failed",
+        "expedition.delivered",
+        "expedition.in-transit",
+        "expedition.picked-up-by-carrier",
         "inventory.reservation-rejected",
         "invoice.issued",
         "order.confirmed",

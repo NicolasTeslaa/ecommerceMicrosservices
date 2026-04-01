@@ -51,6 +51,13 @@
     <Project Path="services/CustomerService/Customer.Infrastructure/Customer.Infrastructure.csproj" />
     <Project Path="services/CustomerService/Customer.Tests/Customer.Tests.csproj" />
   </Folder>
+  <Folder Name="/services/ExpeditionService/">
+    <Project Path="services/ExpeditionService/Expedition.API/Expedition.API.csproj" />
+    <Project Path="services/ExpeditionService/Expedition.Application/Expedition.Application.csproj" />
+    <Project Path="services/ExpeditionService/Expedition.Domain/Expedition.Domain.csproj" />
+    <Project Path="services/ExpeditionService/Expedition.Infrastructure/Expedition.Infrastructure.csproj" />
+    <Project Path="services/ExpeditionService/Expedition.Tests/Expedition.Tests.csproj" />
+  </Folder>
   <Folder Name="/services/InventoryService/">
     <Project Path="services/InventoryService/Inventory.API/Inventory.API.csproj" />
     <Project Path="services/InventoryService/Inventory.Application/Inventory.Application.csproj" />
