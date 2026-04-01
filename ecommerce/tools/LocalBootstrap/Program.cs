@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using MySqlConnector;
 
 var repoRoot = FindRepositoryRoot(AppContext.BaseDirectory);
@@ -83,6 +85,7 @@ var services = new[]
 Console.WriteLine($"[{Timestamp()}] Local bootstrap started.");
 Console.WriteLine($"[{Timestamp()}] Repository root: {repoRoot}");
 
+await EnsureKafkaTopicsExistAsync(repoRoot);
 await EnsureDatabasesExistAsync(services, repoRoot);
 await RestoreSolutionAsync(repoRoot);
 await RunMigrationsAsync(services, repoRoot);
@@ -115,6 +118,51 @@ static async Task EnsureDatabasesExistAsync(IEnumerable<BootstrapTarget> service
         command.CommandText = $"CREATE DATABASE IF NOT EXISTS `{databaseName}`;";
         await command.ExecuteNonQueryAsync();
     }
+}
+
+static async Task EnsureKafkaTopicsExistAsync(string repoRoot)
+{
+    var bootstrapServers = ResolveKafkaBootstrapServers(repoRoot);
+    var topics = ResolveKafkaTopics();
+
+    Console.WriteLine($"[{Timestamp()}] Ensuring Kafka topics exist on '{bootstrapServers}'...");
+
+    using var adminClient = new AdminClientBuilder(new AdminClientConfig
+    {
+        BootstrapServers = bootstrapServers
+    }).Build();
+
+    try
+    {
+        await adminClient.CreateTopicsAsync(
+        [
+            .. topics.Select(topic => new TopicSpecification
+            {
+                Name = topic,
+                NumPartitions = 1,
+                ReplicationFactor = 1
+            })
+        ]);
+    }
+    catch (CreateTopicsException exception)
+    {
+        var unexpectedErrors = exception.Results
+            .Where(result => result.Error.Code != ErrorCode.TopicAlreadyExists)
+            .ToArray();
+
+        if (unexpectedErrors.Length > 0)
+        {
+            var details = string.Join(
+                Environment.NewLine,
+                unexpectedErrors.Select(result => $"- {result.Topic}: {result.Error.Reason}"));
+
+            throw new InvalidOperationException(
+                $"Failed to ensure Kafka topics on '{bootstrapServers}'.{Environment.NewLine}{details}",
+                exception);
+        }
+    }
+
+    Console.WriteLine($"[{Timestamp()}] Kafka topics ready: {string.Join(", ", topics)}");
 }
 
 static async Task RestoreSolutionAsync(string repoRoot)
@@ -210,6 +258,41 @@ static string ResolveConnectionString(BootstrapTarget service, string repoRoot)
 
     throw new InvalidOperationException($"Connection string '{service.ConnectionStringName}' was not found in '{appSettingsPath}'.");
 }
+
+static string ResolveKafkaBootstrapServers(string repoRoot)
+{
+    var environmentValue = Environment.GetEnvironmentVariable("Kafka__BootstrapServers");
+    if (!string.IsNullOrWhiteSpace(environmentValue))
+    {
+        return environmentValue;
+    }
+
+    var appSettingsPath = Path.Combine(repoRoot, "ecommerce", "services", "AuthService", "Auth.API", "appsettings.json");
+    using var document = JsonDocument.Parse(File.ReadAllText(appSettingsPath));
+
+    if (document.RootElement.TryGetProperty("Kafka", out var kafkaSection) &&
+        kafkaSection.TryGetProperty("BootstrapServers", out var bootstrapServers))
+    {
+        return bootstrapServers.GetString()
+            ?? throw new InvalidOperationException($"Kafka:BootstrapServers in '{appSettingsPath}' is null.");
+    }
+
+    throw new InvalidOperationException($"Kafka:BootstrapServers was not found in '{appSettingsPath}'.");
+}
+
+static string[] ResolveKafkaTopics() =>
+    [
+        "auth.user-registered",
+        "catalog.product-created",
+        "inventory.reservation-rejected",
+        "invoice.issued",
+        "order.confirmed",
+        "order.pending-payment",
+        "order.processing.requested",
+        "order.rejected",
+        "payment.approved",
+        "payment.failed"
+    ];
 
 static string BuildConnectionStringWithUserVariables(string connectionString)
 {
