@@ -24,7 +24,13 @@ public class CustomersControllerTests
     {
         var customerId = Guid.NewGuid();
         _mediatorMock.Setup(mediator => mediator.Send(It.IsAny<GetCustomerByIdQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CustomerDto { Id = customerId, FullName = "Jane Doe" });
+            .ReturnsAsync(new CustomerDto
+            {
+                Id = customerId,
+                FullName = "Jane Doe",
+                Email = "jane@example.com",
+                PhoneNumber = "11999999999"
+            });
 
         var result = await _controller.GetById(customerId);
 
@@ -32,6 +38,7 @@ public class CustomersControllerTests
         var response = Assert.IsType<ApiResponse<CustomerDto>>(ok.Value);
         Assert.True(response.Success);
         Assert.Equal(customerId, response.Data!.Id);
+        Assert.Equal("11999999999", response.Data.PhoneNumber);
     }
 
     [Fact]

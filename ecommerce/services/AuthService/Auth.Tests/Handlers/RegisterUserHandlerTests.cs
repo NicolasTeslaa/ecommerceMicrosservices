@@ -39,7 +39,7 @@ public class RegisterUserHandlerTests
         Assert.Equal("jane@example.com", result.Email);
         Assert.Equal("Jane Doe", result.FullName);
         Assert.Equal("token-123", result.AccessToken);
-        _registrationServiceMock.Verify(service => service.RegisterAsync(It.IsAny<AuthUser>(), It.IsAny<CancellationToken>()), Times.Once);
+        _registrationServiceMock.Verify(service => service.RegisterAsync(It.IsAny<AuthUser>(), command.PhoneNumber, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class RegisterUserHandlerTests
 
         await Assert.ThrowsAsync<UserAlreadyExistsException>(() => _handler.Handle(command, CancellationToken.None));
 
-        _registrationServiceMock.Verify(service => service.RegisterAsync(It.IsAny<AuthUser>(), It.IsAny<CancellationToken>()), Times.Never);
+        _registrationServiceMock.Verify(service => service.RegisterAsync(It.IsAny<AuthUser>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

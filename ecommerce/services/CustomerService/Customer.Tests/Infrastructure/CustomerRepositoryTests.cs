@@ -20,6 +20,7 @@ public class CustomerRepositoryTests
         var result = await repository.GetByIdAsync(customer.Id);
 
         Assert.NotNull(result);
+        Assert.Equal(customer.PhoneNumber, result!.PhoneNumber);
         Assert.Single(result!.Addresses);
     }
 
@@ -44,6 +45,7 @@ public class CustomerRepositoryTests
         await repository.AddAsync(customer);
 
         Assert.Equal(1, await dbContext.Customers.CountAsync());
+        Assert.Equal("11999999999", (await dbContext.Customers.SingleAsync()).PhoneNumber);
     }
 
     [Fact]

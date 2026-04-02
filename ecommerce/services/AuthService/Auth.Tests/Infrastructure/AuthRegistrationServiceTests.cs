@@ -19,7 +19,7 @@ public class AuthRegistrationServiceTests
         var service = CreateService(dbContext);
         var user = AuthTestData.CreateUser();
 
-        await service.RegisterAsync(user);
+        await service.RegisterAsync(user, "11999999999");
 
         Assert.Equal(1, await dbContext.Users.CountAsync());
         Assert.Equal(1, await dbContext.OutboxMessages.CountAsync());
@@ -32,7 +32,7 @@ public class AuthRegistrationServiceTests
         var service = CreateService(dbContext, "custom.auth.topic");
         var user = AuthTestData.CreateUser();
 
-        await service.RegisterAsync(user);
+        await service.RegisterAsync(user, "11999999999");
 
         var outbox = await dbContext.OutboxMessages.SingleAsync();
         Assert.Equal("custom.auth.topic", outbox.Topic);
@@ -45,7 +45,7 @@ public class AuthRegistrationServiceTests
         var service = CreateService(dbContext);
         var user = AuthTestData.CreateUser();
 
-        await service.RegisterAsync(user);
+        await service.RegisterAsync(user, "11999999999");
 
         var outbox = await dbContext.OutboxMessages.SingleAsync();
         var integrationEvent = JsonSerializer.Deserialize<UserRegisteredIntegrationEvent>(outbox.Payload);
@@ -54,6 +54,7 @@ public class AuthRegistrationServiceTests
         Assert.Equal(user.Id, integrationEvent!.AuthUserId);
         Assert.Equal(user.CustomerId, integrationEvent.CustomerId);
         Assert.Equal(user.Email, integrationEvent.Email);
+        Assert.Equal("11999999999", integrationEvent.PhoneNumber);
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class AuthRegistrationServiceTests
         var service = CreateService(dbContext);
         var user = AuthTestData.CreateUser();
 
-        await service.RegisterAsync(user);
+        await service.RegisterAsync(user, "11999999999");
 
         var outbox = await dbContext.OutboxMessages.SingleAsync();
         Assert.Equal(user.CustomerId.ToString(), outbox.Key);
@@ -77,7 +78,7 @@ public class AuthRegistrationServiceTests
         var user = AuthTestData.CreateUser();
         await dbContext.DisposeAsync();
 
-        var act = () => service.RegisterAsync(user);
+        var act = () => service.RegisterAsync(user, "11999999999");
 
         await Assert.ThrowsAsync<PersistenceException>(act);
     }

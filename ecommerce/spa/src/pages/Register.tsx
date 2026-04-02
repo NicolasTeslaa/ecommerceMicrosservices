@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Phone } from 'lucide-react';
 import { useAuth } from '@/store/useAuth';
 import { toast } from 'sonner';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -16,11 +17,12 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) { toast.error('Preencha todos os campos'); return; }
+    if (!name || !email || !phoneNumber || !password) { toast.error('Preencha todos os campos'); return; }
     if (password.length < 6) { toast.error('Senha deve ter pelo menos 6 caracteres'); return; }
+    if (phoneNumber.replace(/\D/g, '').length < 10) { toast.error('Informe um telefone valido'); return; }
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, phoneNumber, password);
       toast.success('Conta criada com sucesso!');
       navigate('/');
     } catch {
@@ -72,6 +74,20 @@ const Register = () => {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="seu@email.com"
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-mono text-muted-foreground uppercase tracking-widest block mb-2">Telefone</label>
+            <div className="relative">
+              <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={e => setPhoneNumber(e.target.value)}
+                placeholder="(11) 99999-9999"
                 className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm transition-all"
               />
             </div>

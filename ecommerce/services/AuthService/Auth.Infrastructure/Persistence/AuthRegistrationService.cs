@@ -18,7 +18,7 @@ public class AuthRegistrationService : IAuthRegistrationService
         _configuration = configuration;
     }
 
-    public async Task RegisterAsync(AuthUser user, CancellationToken cancellationToken = default)
+    public async Task RegisterAsync(AuthUser user, string phoneNumber, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -30,6 +30,7 @@ public class AuthRegistrationService : IAuthRegistrationService
                 CustomerId = user.CustomerId,
                 FullName = user.FullName,
                 Email = user.Email,
+                PhoneNumber = phoneNumber.Trim(),
                 RegisteredAtUtc = user.CreatedAtUtc
             };
 

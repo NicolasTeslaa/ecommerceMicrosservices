@@ -4,5 +4,5 @@ namespace Auth.Application.Interfaces;
 
 public interface IAuthRegistrationService
 {
-    Task RegisterAsync(AuthUser user, CancellationToken cancellationToken = default);
+    Task RegisterAsync(AuthUser user, string phoneNumber, CancellationToken cancellationToken = default);
 }

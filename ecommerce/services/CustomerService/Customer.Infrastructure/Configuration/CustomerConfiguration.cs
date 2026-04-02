@@ -26,6 +26,11 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer.Domain.En
             .HasMaxLength(200)
             .IsRequired();
 
+        builder.Property(customer => customer.PhoneNumber)
+            .HasColumnName("phone_number")
+            .HasMaxLength(30)
+            .IsRequired();
+
         builder.Property(customer => customer.CreatedAtUtc)
             .HasColumnName("created_at_utc")
             .IsRequired();

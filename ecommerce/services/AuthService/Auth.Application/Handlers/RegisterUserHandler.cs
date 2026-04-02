@@ -37,7 +37,7 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, AuthResp
         var passwordHash = _passwordHasher.Hash(request.Password);
         var user = new AuthUser(request.FullName, email, passwordHash);
 
-        await _registrationService.RegisterAsync(user, cancellationToken);
+        await _registrationService.RegisterAsync(user, request.PhoneNumber, cancellationToken);
 
         var (accessToken, expiresAtUtc) = _tokenGenerator.Generate(user);
 

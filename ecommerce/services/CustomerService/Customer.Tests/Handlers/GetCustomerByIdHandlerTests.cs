@@ -27,6 +27,7 @@ public class GetCustomerByIdHandlerTests
 
         Assert.Equal(customer.Id, result.Id);
         Assert.Equal(customer.Email, result.Email);
+        Assert.Equal(customer.PhoneNumber, result.PhoneNumber);
     }
 
     [Fact]

@@ -13,15 +13,17 @@ public class CustomerTests
         Assert.NotEqual(Guid.Empty, customer.Id);
         Assert.Equal("Jane Doe", customer.FullName);
         Assert.Equal("jane@example.com", customer.Email);
+        Assert.Equal("11999999999", customer.PhoneNumber);
     }
 
     [Fact]
     public void Constructor_ShouldTrimFullName_AndNormalizeEmail()
     {
-        var customer = CustomerTestData.CreateCustomer(fullName: " Jane Doe ", email: " Jane@Example.Com ");
+        var customer = CustomerTestData.CreateCustomer(fullName: " Jane Doe ", email: " Jane@Example.Com ", phoneNumber: " (11) 99999-9999 ");
 
         Assert.Equal("Jane Doe", customer.FullName);
         Assert.Equal("jane@example.com", customer.Email);
+        Assert.Equal("11999999999", customer.PhoneNumber);
     }
 
     [Fact]
@@ -46,6 +48,14 @@ public class CustomerTests
         var act = () => CustomerTestData.CreateCustomer(email: "email-invalido");
 
         Assert.Throws<InvalidCustomerEmailException>(act);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowInvalidOperationException_WhenPhoneNumberIsInvalid()
+    {
+        var act = () => CustomerTestData.CreateCustomer(phoneNumber: "123");
+
+        Assert.Throws<InvalidOperationException>(act);
     }
 
     [Fact]

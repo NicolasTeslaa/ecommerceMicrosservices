@@ -86,7 +86,14 @@ var services = new[]
         ProjectRelativePath: @"ecommerce\services\NotaFiscalService\NotaFiscal.Infrastructure\NotaFiscal.Infrastructure.csproj",
         ContextName: "NotaFiscalDbContext",
         AppSettingsRelativePath: @"ecommerce\services\NotaFiscalService\NotaFiscal.API\appsettings.json",
-        ConnectionStringName: "NotaFiscalDb")
+        ConnectionStringName: "NotaFiscalDb"),
+    new BootstrapTarget(
+        Name: "NotificationService",
+        StartupProjectRelativePath: @"ecommerce\services\NotificationService\Notification.API\Notification.API.csproj",
+        ProjectRelativePath: @"ecommerce\services\NotificationService\Notification.Infrastructure\Notification.Infrastructure.csproj",
+        ContextName: "NotificationDbContext",
+        AppSettingsRelativePath: @"ecommerce\services\NotificationService\Notification.API\appsettings.json",
+        ConnectionStringName: "NotificationDb")
 };
 
 Console.WriteLine($"[{Timestamp()}] Local bootstrap started.");

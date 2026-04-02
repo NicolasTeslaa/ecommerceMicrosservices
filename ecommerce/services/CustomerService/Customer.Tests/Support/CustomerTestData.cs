@@ -9,13 +9,15 @@ internal static class CustomerTestData
         Guid? id = null,
         Guid? authUserId = null,
         string fullName = "Jane Doe",
-        string email = "jane@example.com")
+        string email = "jane@example.com",
+        string phoneNumber = "11999999999")
     {
         return new Customer.Domain.Entities.Customer(
             id ?? Guid.NewGuid(),
             authUserId ?? Guid.NewGuid(),
             fullName,
             email,
+            phoneNumber,
             DateTime.UtcNow);
     }
 

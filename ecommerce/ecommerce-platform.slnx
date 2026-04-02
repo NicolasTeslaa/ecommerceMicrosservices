@@ -72,7 +72,13 @@
     <Project Path="services/NotaFiscalService/NotaFiscal.Infrastructure/NotaFiscal.Infrastructure.csproj" />
     <Project Path="services/NotaFiscalService/NotaFiscal.Tests/NotaFiscal.Tests.csproj" />
   </Folder>
-  <Folder Name="/services/NotificationService/" />
+  <Folder Name="/services/NotificationService/">
+    <Project Path="services/NotificationService/Notification.API/Notification.API.csproj" />
+    <Project Path="services/NotificationService/Notification.Application/Notification.Application.csproj" />
+    <Project Path="services/NotificationService/Notification.Domain/Notification.Domain.csproj" />
+    <Project Path="services/NotificationService/Notification.Infrastructure/Notification.Infrastructure.csproj" />
+    <Project Path="services/NotificationService/Notification.Tests/Notification.Tests.csproj" />
+  </Folder>
   <Folder Name="/services/OrderService/">
     <Project Path="services/OrderService/Order.API.Common/Order.API.Common.csproj" />
     <Project Path="services/OrderService/Order.API.Processor/Order.API.Processor.csproj" />

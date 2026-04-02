@@ -97,6 +97,7 @@ public class UserRegisteredConsumerService : BackgroundService
                         integrationEvent.AuthUserId,
                         integrationEvent.FullName,
                         integrationEvent.Email,
+                        integrationEvent.PhoneNumber,
                         integrationEvent.RegisteredAtUtc);
 
                     await repository.AddAsync(customer, stoppingToken);

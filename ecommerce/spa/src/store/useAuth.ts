@@ -9,7 +9,7 @@ interface AuthState {
   accessToken: string | null;
   expiresAtUtc: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, phoneNumber: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -63,10 +63,11 @@ export const useAuth = create<AuthState>()(
         return true;
       },
 
-      register: async (name: string, email: string, password: string) => {
+      register: async (name: string, email: string, phoneNumber: string, password: string) => {
         const response = await authService.register({
           fullName: name.trim(),
           email: email.trim().toLowerCase(),
+          phoneNumber: phoneNumber.trim(),
           password,
         });
 

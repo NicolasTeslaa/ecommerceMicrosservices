@@ -223,7 +223,7 @@ export const authService = {
     return unwrap(data);
   },
 
-  async register(payload: { fullName: string; email: string; password: string }): Promise<AuthApiResponse> {
+  async register(payload: { fullName: string; email: string; phoneNumber: string; password: string }): Promise<AuthApiResponse> {
     const { data } = await backendApi.post<ApiResponse<AuthApiResponse>>('/api/auth/register', payload);
     return unwrap(data);
   },

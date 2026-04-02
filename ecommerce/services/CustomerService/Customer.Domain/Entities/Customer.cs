@@ -11,6 +11,7 @@ public class Customer
     public Guid AuthUserId { get; private set; }
     public string FullName { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
+    public string PhoneNumber { get; private set; } = string.Empty;
     public DateTime CreatedAtUtc { get; private set; }
     public IReadOnlyCollection<CustomerAddress> Addresses => _addresses;
 
@@ -18,14 +19,15 @@ public class Customer
     {
     }
 
-    public Customer(Guid id, Guid authUserId, string fullName, string email, DateTime createdAtUtc)
+    public Customer(Guid id, Guid authUserId, string fullName, string email, string phoneNumber, DateTime createdAtUtc)
     {
-        Validate(fullName, email);
+        Validate(fullName, email, phoneNumber);
 
         Id = id;
         AuthUserId = authUserId;
         FullName = fullName.Trim();
         Email = email.Trim().ToLowerInvariant();
+        PhoneNumber = NormalizePhoneNumber(phoneNumber);
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -124,7 +126,7 @@ public class Customer
             address.SetDefault(false);
     }
 
-    private static void Validate(string fullName, string email)
+    private static void Validate(string fullName, string email, string phoneNumber)
     {
         if (string.IsNullOrWhiteSpace(fullName))
             throw new InvalidCustomerNameException();
@@ -140,5 +142,14 @@ public class Customer
         {
             throw new InvalidCustomerEmailException();
         }
+
+        var digits = new string(phoneNumber.Where(char.IsDigit).ToArray());
+        if (digits.Length < 10 || digits.Length > 15)
+            throw new InvalidOperationException("A valid customer phone number must be provided.");
+    }
+
+    private static string NormalizePhoneNumber(string phoneNumber)
+    {
+        return new string(phoneNumber.Where(char.IsDigit).ToArray());
     }
 }

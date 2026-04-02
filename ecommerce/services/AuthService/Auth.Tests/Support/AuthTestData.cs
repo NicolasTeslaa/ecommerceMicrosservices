@@ -16,12 +16,14 @@ internal static class AuthTestData
     public static RegisterUserCommand CreateRegisterCommand(
         string fullName = "Jane Doe",
         string email = "jane@example.com",
+        string phoneNumber = "11999999999",
         string password = "secret123")
     {
         return new RegisterUserCommand
         {
             FullName = fullName,
             Email = email,
+            PhoneNumber = phoneNumber,
             Password = password
         };
     }

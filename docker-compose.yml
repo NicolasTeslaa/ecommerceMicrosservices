@@ -99,6 +99,7 @@ services:
       ConnectionStrings__PaymentDb: server=mysql;port=3306;database=ecommerce-platform-payment;user=root;password=12345678
       ConnectionStrings__InventoryDb: server=mysql;port=3306;database=ecommerce-platform-inventory;user=root;password=12345678
       ConnectionStrings__NotaFiscalDb: server=mysql;port=3306;database=ecommerce-platform-nota-fiscal;user=root;password=12345678
+      ConnectionStrings__NotificationDb: server=mysql;port=3306;database=ecommerce-platform-notification;user=root;password=12345678
     depends_on:
       mysql:
         condition: service_healthy
@@ -431,6 +432,33 @@ services:
     ports:
       - "5109:8080"
 
+  notification-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        PROJECT_PATH: ecommerce/services/NotificationService/Notification.API/Notification.API.csproj
+        PROJECT_DLL: Notification.API.dll
+    container_name: ecommerce-notification-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      ConnectionStrings__NotificationDb: server=mysql;port=3306;database=ecommerce-platform-notification;user=root;password=12345678
+      Kafka__BootstrapServers: kafka:9093
+      CustomerService__BaseUrl: http://customer-api:8080
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      customer-api:
+        condition: service_started
+    ports:
+      - "5114:8080"
+
   api-gateway:
     build:
       context: .
@@ -458,6 +486,7 @@ services:
       ReverseProxy__Clusters__inventory-cluster__Destinations__destination1__Address: http://inventory-api:8080/
       ReverseProxy__Clusters__invoice-cluster__Destinations__destination1__Address: http://nota-fiscal-api:8080/
       ReverseProxy__Clusters__expedition-cluster__Destinations__destination1__Address: http://expedition-api:8080/
+      ReverseProxy__Clusters__notification-cluster__Destinations__destination1__Address: http://notification-api:8080/
     depends_on:
       auth-api:
         condition: service_started
@@ -480,6 +509,8 @@ services:
       nota-fiscal-api:
         condition: service_started
       expedition-api:
+        condition: service_started
+      notification-api:
         condition: service_started
       shipping-api:
         condition: service_started

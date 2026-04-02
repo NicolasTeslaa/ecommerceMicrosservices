@@ -23,7 +23,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnCreated_WhenMediatorReturnsResponse()
     {
-        var command = new RegisterUserCommand { FullName = "Jane Doe", Email = "jane@example.com", Password = "secret123" };
+        var command = new RegisterUserCommand { FullName = "Jane Doe", Email = "jane@example.com", PhoneNumber = "11999999999", Password = "secret123" };
         _mediatorMock.Setup(mediator => mediator.Send(command, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AuthResponseDto { UserId = Guid.NewGuid(), Email = command.Email });
 
@@ -38,7 +38,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldForwardCommandToMediator()
     {
-        var command = new RegisterUserCommand { FullName = "Jane Doe", Email = "jane@example.com", Password = "secret123" };
+        var command = new RegisterUserCommand { FullName = "Jane Doe", Email = "jane@example.com", PhoneNumber = "11999999999", Password = "secret123" };
         _mediatorMock.Setup(mediator => mediator.Send(command, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AuthResponseDto());
 

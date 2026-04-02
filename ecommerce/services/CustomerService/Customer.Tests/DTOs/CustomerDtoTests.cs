@@ -16,6 +16,7 @@ public class CustomerDtoTests
         Assert.Equal(customer.AuthUserId, dto.AuthUserId);
         Assert.Equal(customer.FullName, dto.FullName);
         Assert.Equal(customer.Email, dto.Email);
+        Assert.Equal(customer.PhoneNumber, dto.PhoneNumber);
     }
 
     [Fact]
