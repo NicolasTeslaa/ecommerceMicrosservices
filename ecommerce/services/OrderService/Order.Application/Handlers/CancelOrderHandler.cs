@@ -2,7 +2,6 @@ using MediatR;
 using Order.Application.Commands;
 using Order.Application.DTOs;
 using Order.Application.Interfaces;
-using Order.Domain.Exceptions;
 
 namespace Order.Application.Handlers;
 
@@ -18,10 +17,10 @@ public class CancelOrderHandler : IRequestHandler<CancelOrderCommand, OrderActio
     public async Task<OrderActionResultDto> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
     {
         if (request.OrderId == Guid.Empty)
-            throw new InvalidOrderIdException();
+            return new OrderActionResultDto { OrderId = Guid.Empty, Message = "Invalid order id.", Status = string.Empty };
 
         if (request.CustomerId == Guid.Empty)
-            throw new InvalidCustomerIdException();
+            return new OrderActionResultDto { OrderId = request.OrderId, Message = "Invalid customer id.", Status = string.Empty };
 
         return await _cancellationService.CancelAsync(request.OrderId, request.CustomerId, cancellationToken);
     }

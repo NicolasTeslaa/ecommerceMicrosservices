@@ -1,7 +1,6 @@
 ﻿using Catalog.Application.Commands;
 using Catalog.Application.Interfaces;
 using Catalog.Domain.Entities;
-using Catalog.Domain.Exceptions;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
@@ -28,15 +27,15 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Guid>
     public async Task<Guid> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         if (request.CategoryId == Guid.Empty)
-            throw new InvalidCategoryIdException();
+            return Guid.Empty;
 
         if (request.InitialStockQuantity < 0)
-            throw new InvalidStockQuantityException();
+            return Guid.Empty;
 
         var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
 
         if (category is null)
-            throw new CategoryNotFoundException(request.CategoryId);
+            return Guid.Empty;
 
         var equivalentProduct = await _repository.FindEquivalentActiveAsync(
             request.Name,

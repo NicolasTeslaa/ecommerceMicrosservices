@@ -1,7 +1,6 @@
 ﻿using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Queries;
-using Catalog.Domain.Exceptions;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
@@ -15,12 +14,12 @@ public class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, Produc
     public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty)
-            throw new InvalidProductIdException();
+            return new ProductDto { Id = Guid.Empty };
 
         var product = await _repository.GetByIdAsync(request.Id, cancellationToken);
 
         if (product is null)
-            throw new ProductNotFoundException(request.Id);
+            return new ProductDto { Id = request.Id };
 
         return ProductDto.MapFromReadModel(product);
     }

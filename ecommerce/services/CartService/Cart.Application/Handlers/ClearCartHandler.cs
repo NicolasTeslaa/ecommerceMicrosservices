@@ -1,7 +1,6 @@
 using Cart.Application.Commands;
 using Cart.Application.DTOs;
 using Cart.Application.Interfaces;
-using Cart.Domain.Exceptions;
 using MediatR;
 
 namespace Cart.Application.Handlers;
@@ -17,10 +16,10 @@ public class ClearCartHandler : IRequestHandler<ClearCartCommand, CartDto>
         var ownerId = request.OwnerId?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(ownerId))
-            throw new InvalidOwnerIdException();
+            return CartDto.Empty(string.Empty, request.OwnerType);
 
         if (!Enum.IsDefined(request.OwnerType))
-            throw new InvalidOwnerTypeException();
+            return CartDto.Empty(ownerId, request.OwnerType);
 
         var cart = await _repository.GetByOwnerAsync(ownerId, request.OwnerType, cancellationToken);
 

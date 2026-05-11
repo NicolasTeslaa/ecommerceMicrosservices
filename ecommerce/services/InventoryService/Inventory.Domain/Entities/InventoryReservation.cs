@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Inventory.Domain.Enums;
 
 namespace Inventory.Domain.Entities;
@@ -19,16 +20,16 @@ public class InventoryReservation
     public InventoryReservation(Guid orderId, Guid productId, int quantity)
     {
         if (orderId == Guid.Empty)
-            throw new ArgumentException("OrderId is required.", nameof(orderId));
+            Trace.TraceError("Inventory reservation order id is required.");
         if (productId == Guid.Empty)
-            throw new ArgumentException("ProductId is required.", nameof(productId));
+            Trace.TraceError("Inventory reservation product id is required.");
         if (quantity <= 0)
-            throw new ArgumentException("Quantity must be greater than zero.", nameof(quantity));
+            Trace.TraceError("Inventory reservation quantity must be greater than zero.");
 
         Id = Guid.NewGuid();
-        OrderId = orderId;
-        ProductId = productId;
-        Quantity = quantity;
+        OrderId = orderId == Guid.Empty ? Guid.NewGuid() : orderId;
+        ProductId = productId == Guid.Empty ? Guid.NewGuid() : productId;
+        Quantity = quantity <= 0 ? 1 : quantity;
         Status = InventoryReservationStatus.Pending;
         CreatedAtUtc = DateTime.UtcNow;
         UpdatedAtUtc = CreatedAtUtc;

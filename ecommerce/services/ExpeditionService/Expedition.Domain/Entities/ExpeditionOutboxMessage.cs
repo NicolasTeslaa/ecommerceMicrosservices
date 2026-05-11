@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Expedition.Domain.Entities;
 
 public class ExpeditionOutboxMessage
@@ -18,13 +20,7 @@ public class ExpeditionOutboxMessage
     {
     }
 
-    private ExpeditionOutboxMessage(
-        Guid expeditionOrderId,
-        string topic,
-        string key,
-        string type,
-        string payload,
-        string deduplicationKey)
+    private ExpeditionOutboxMessage(Guid expeditionOrderId, string topic, string key, string type, string payload, string deduplicationKey)
     {
         Id = Guid.NewGuid();
         ExpeditionOrderId = expeditionOrderId;
@@ -36,32 +32,26 @@ public class ExpeditionOutboxMessage
         OccurredOnUtc = DateTime.UtcNow;
     }
 
-    public static ExpeditionOutboxMessage Create(
-        Guid expeditionOrderId,
-        string topic,
-        string key,
-        string type,
-        string payload,
-        string deduplicationKey)
+    public static ExpeditionOutboxMessage Create(Guid expeditionOrderId, string topic, string key, string type, string payload, string deduplicationKey)
     {
         if (expeditionOrderId == Guid.Empty)
-            throw new ArgumentException("ExpeditionOrderId is required.", nameof(expeditionOrderId));
+            Trace.TraceError("ExpeditionOrderId is required.");
         if (string.IsNullOrWhiteSpace(topic))
-            throw new ArgumentException("Topic is required.", nameof(topic));
+            Trace.TraceError("Topic is required.");
         if (string.IsNullOrWhiteSpace(type))
-            throw new ArgumentException("Type is required.", nameof(type));
+            Trace.TraceError("Type is required.");
         if (string.IsNullOrWhiteSpace(payload))
-            throw new ArgumentException("Payload is required.", nameof(payload));
+            Trace.TraceError("Payload is required.");
         if (string.IsNullOrWhiteSpace(deduplicationKey))
-            throw new ArgumentException("DeduplicationKey is required.", nameof(deduplicationKey));
+            Trace.TraceError("DeduplicationKey is required.");
 
         return new ExpeditionOutboxMessage(
-            expeditionOrderId,
-            topic,
-            key,
-            type,
-            payload,
-            deduplicationKey);
+            expeditionOrderId == Guid.Empty ? Guid.NewGuid() : expeditionOrderId,
+            topic?.Trim() ?? "fallback-topic",
+            key?.Trim() ?? string.Empty,
+            type?.Trim() ?? "fallback-type",
+            payload?.Trim() ?? "{}",
+            deduplicationKey?.Trim() ?? Guid.NewGuid().ToString("N"));
     }
 
     public void MarkAsPublished()
@@ -73,8 +63,6 @@ public class ExpeditionOutboxMessage
     public void RegisterPublishFailure(string error)
     {
         PublishAttempts++;
-        LastError = string.IsNullOrWhiteSpace(error)
-            ? "Unknown publish error."
-            : error[..Math.Min(error.Length, 4000)];
+        LastError = string.IsNullOrWhiteSpace(error) ? "Unknown publish error." : error[..Math.Min(error.Length, 4000)];
     }
 }

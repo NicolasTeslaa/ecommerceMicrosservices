@@ -1,26 +1,37 @@
 using ECommerce.Shared.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Order.Application.Interfaces;
 using Order.Application.ReadModels;
-using Order.Domain.Exceptions;
 
 namespace Order.Infrastructure.Persistence;
 
 public class OrderReadRepository : IOrderReadRepository
 {
     private readonly OrderReadDbContext _dbContext;
+    private readonly ILogger<OrderReadRepository> _logger;
 
-    public OrderReadRepository(OrderReadDbContext dbContext)
+    public OrderReadRepository(OrderReadDbContext dbContext, ILogger<OrderReadRepository>? logger = null)
     {
         _dbContext = dbContext;
+        _logger = logger ?? NullLogger<OrderReadRepository>.Instance;
     }
 
     public async Task<OrderReadModel?> GetByIdAsync(Guid orderId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Orders
-            .AsNoTracking()
-            .Include(order => order.Items)
-            .FirstOrDefaultAsync(order => order.Id == orderId, cancellationToken);
+        try
+        {
+            return await _dbContext.Orders
+                .AsNoTracking()
+                .Include(order => order.Items)
+                .FirstOrDefaultAsync(order => order.Id == orderId, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to retrieve order '{OrderId}' from the read database.", orderId);
+            return null;
+        }
     }
 
     public async Task<PagedResult<OrderReadModel>> GetByCustomerIdAsync(
@@ -47,7 +58,8 @@ public class OrderReadRepository : IOrderReadRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve orders for customer '{customerId}' from the read database. {exception}");
+            _logger.LogError(exception, "Failed to retrieve orders for customer '{CustomerId}' from the read database.", customerId);
+            return PagedResult<OrderReadModel>.Create(Array.Empty<OrderReadModel>(), pagination.PageNumber, pagination.PageSize, 0);
         }
     }
 }

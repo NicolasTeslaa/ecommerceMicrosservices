@@ -1,7 +1,6 @@
 using Cart.Application.Commands;
 using Cart.Application.DTOs;
 using Cart.Application.Interfaces;
-using Cart.Domain.Exceptions;
 using MediatR;
 
 namespace Cart.Application.Handlers;
@@ -17,13 +16,14 @@ public class UpdateCartItemQuantityHandler : IRequestHandler<UpdateCartItemQuant
         var ownerId = request.OwnerId?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(ownerId))
-            throw new InvalidOwnerIdException();
+            return CartDto.Empty(string.Empty, request.OwnerType);
 
         if (!Enum.IsDefined(request.OwnerType))
-            throw new InvalidOwnerTypeException();
+            return CartDto.Empty(ownerId, request.OwnerType);
 
-        var cart = await _repository.GetByOwnerAsync(ownerId, request.OwnerType, cancellationToken)
-            ?? throw new CartNotFoundException(ownerId, request.OwnerType);
+        var cart = await _repository.GetByOwnerAsync(ownerId, request.OwnerType, cancellationToken);
+        if (cart is null)
+            return CartDto.Empty(ownerId, request.OwnerType);
 
         cart.UpdateItemQuantity(request.ProductId, request.Quantity);
         await _repository.UpdateAsync(cart, cancellationToken);

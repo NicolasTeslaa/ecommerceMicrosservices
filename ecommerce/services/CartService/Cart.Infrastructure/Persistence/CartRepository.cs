@@ -1,15 +1,21 @@
-using Cart.Application.Interfaces;
+﻿using Cart.Application.Interfaces;
 using Cart.Domain.Enums;
-using Cart.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cart.Infrastructure.Persistence;
 
 public class CartRepository : ICartRepository
 {
     private readonly CartDbContext _context;
+    private readonly ILogger<CartRepository> _logger;
 
-    public CartRepository(CartDbContext context) => _context = context;
+    public CartRepository(CartDbContext context, ILogger<CartRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<CartRepository>.Instance;
+    }
 
     public async Task<Cart.Domain.Entities.Cart?> GetByOwnerAsync(string ownerId, CartOwnerType ownerType, CancellationToken cancellationToken = default)
     {
@@ -23,7 +29,8 @@ public class CartRepository : ICartRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve cart for owner '{ownerType}:{ownerId}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve cart for owner '{OwnerType}:{OwnerId}'.", ownerType, ownerId);
+            return null;
         }
     }
 
@@ -36,12 +43,12 @@ public class CartRepository : ICartRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to persist cart '{cart.Id}'.", exception);
+            _logger.LogError(exception, "Failed to persist cart '{CartId}'.", cart.Id);
         }
     }
 
 
-    // feito em sql puro pois o EF Core n�o tem suporte a update com join, e o update do carrinho precisa atualizar os itens relacionados
+    // feito em sql puro pois o EF Core não tem suporte a update com join, e o update do carrinho precisa atualizar os itens relacionados
     public async Task UpdateAsync(Domain.Entities.Cart cart, CancellationToken cancellationToken = default)
     {
         try
@@ -60,7 +67,10 @@ public class CartRepository : ICartRepository
                 cancellationToken);
 
             if (affectedRows == 0)
-                throw new CartNotFoundException(cart.OwnerId, cart.OwnerType);
+            {
+                _logger.LogError("Failed to update cart '{CartId}' because it was not found for owner '{OwnerType}:{OwnerId}'.", cart.Id, cart.OwnerType, cart.OwnerId);
+                return;
+            }
 
             await _context.Database.ExecuteSqlInterpolatedAsync(
                 $"DELETE FROM cart_items WHERE cart_id = {cart.Id}",
@@ -80,7 +90,8 @@ public class CartRepository : ICartRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to update cart '{cart.Id}'.", exception);
+            _logger.LogError(exception, "Failed to update cart '{CartId}'.", cart.Id);
         }
     }
 }
+

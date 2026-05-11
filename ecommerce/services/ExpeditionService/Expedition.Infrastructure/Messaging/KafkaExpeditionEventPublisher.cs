@@ -6,6 +6,8 @@ using Expedition.Domain.Enums;
 using Expedition.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Expedition.Infrastructure.Messaging;
 
@@ -13,11 +15,13 @@ public class KafkaExpeditionEventPublisher : IExpeditionEventPublisher
 {
     private readonly IConfiguration _configuration;
     private readonly ExpeditionDbContext _dbContext;
+    private readonly ILogger<KafkaExpeditionEventPublisher> _logger;
 
-    public KafkaExpeditionEventPublisher(IConfiguration configuration, ExpeditionDbContext dbContext)
+    public KafkaExpeditionEventPublisher(IConfiguration configuration, ExpeditionDbContext dbContext, ILogger<KafkaExpeditionEventPublisher>? logger = null)
     {
         _configuration = configuration;
         _dbContext = dbContext;
+        _logger = logger ?? NullLogger<KafkaExpeditionEventPublisher>.Instance;
     }
 
     public async Task PublishStatusChangedAsync(ExpeditionOrder expeditionOrder, CancellationToken cancellationToken = default)
@@ -75,8 +79,14 @@ public class KafkaExpeditionEventPublisher : IExpeditionEventPublisher
             ExpeditionStatus.InTransit => _configuration["Kafka:ExpeditionInTransitTopic"] ?? "expedition.in-transit",
             ExpeditionStatus.Delivered => _configuration["Kafka:ExpeditionDeliveredTopic"] ?? "expedition.delivered",
             ExpeditionStatus.DeliveryFailed => _configuration["Kafka:ExpeditionDeliveryFailedTopic"] ?? "expedition.delivery-failed",
-            _ => throw new InvalidOperationException($"Unsupported expedition status '{status}'.")
+            _ => ResolveUnknownTopic(status)
         };
+    }
+
+    private string ResolveUnknownTopic(ExpeditionStatus status)
+    {
+        _logger.LogError("Unsupported expedition status '{Status}' received while resolving Kafka topic.", status);
+        return "expedition.unknown";
     }
 
     private static DateTime ResolveOccurredAtUtc(ExpeditionOrder expeditionOrder)

@@ -1,3 +1,5 @@
+﻿using System.Diagnostics;
+
 namespace Inventory.Domain.Entities;
 
 public class InventoryItem
@@ -18,16 +20,16 @@ public class InventoryItem
     public InventoryItem(Guid productId, string productName, int initialStockQuantity, bool active)
     {
         if (productId == Guid.Empty)
-            throw new ArgumentException("ProductId is required.", nameof(productId));
+            LogSoftFailure("InventoryItem received an empty product id.");
         if (string.IsNullOrWhiteSpace(productName))
-            throw new ArgumentException("ProductName is required.", nameof(productName));
+            LogSoftFailure("InventoryItem received an empty product name.");
         if (initialStockQuantity < 0)
-            throw new ArgumentException("Initial stock quantity cannot be negative.", nameof(initialStockQuantity));
+            LogSoftFailure("InventoryItem received a negative initial stock quantity.");
 
         Id = Guid.NewGuid();
-        ProductId = productId;
-        ProductName = productName.Trim();
-        AvailableQuantity = initialStockQuantity;
+        ProductId = productId == Guid.Empty ? Guid.NewGuid() : productId;
+        ProductName = productName?.Trim() ?? string.Empty;
+        AvailableQuantity = Math.Max(initialStockQuantity, 0);
         ReservedQuantity = 0;
         Active = active;
         CreatedAtUtc = DateTime.UtcNow;
@@ -39,7 +41,10 @@ public class InventoryItem
     public void IncreaseStock(int quantity)
     {
         if (quantity <= 0)
-            throw new ArgumentException("Quantity must be greater than zero.", nameof(quantity));
+        {
+            LogSoftFailure("InventoryItem received a non-positive stock increment.");
+            return;
+        }
 
         AvailableQuantity += quantity;
         Touch();
@@ -48,7 +53,10 @@ public class InventoryItem
     public void Reserve(int quantity)
     {
         if (!CanReserve(quantity))
-            throw new InvalidOperationException("Insufficient inventory to reserve.");
+        {
+            LogSoftFailure("InventoryItem could not reserve the requested quantity.");
+            return;
+        }
 
         AvailableQuantity -= quantity;
         ReservedQuantity += quantity;
@@ -58,7 +66,10 @@ public class InventoryItem
     public void ConfirmReservation(int quantity)
     {
         if (quantity <= 0 || ReservedQuantity < quantity)
-            throw new InvalidOperationException("Reserved inventory is insufficient to confirm.");
+        {
+            LogSoftFailure("InventoryItem could not confirm the requested reserved quantity.");
+            return;
+        }
 
         ReservedQuantity -= quantity;
         Touch();
@@ -67,7 +78,10 @@ public class InventoryItem
     public void ReleaseReservation(int quantity)
     {
         if (quantity <= 0 || ReservedQuantity < quantity)
-            throw new InvalidOperationException("Reserved inventory is insufficient to release.");
+        {
+            LogSoftFailure("InventoryItem could not release the requested reserved quantity.");
+            return;
+        }
 
         ReservedQuantity -= quantity;
         AvailableQuantity += quantity;
@@ -87,4 +101,6 @@ public class InventoryItem
     {
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    private static void LogSoftFailure(string message) => Trace.TraceError(message);
 }

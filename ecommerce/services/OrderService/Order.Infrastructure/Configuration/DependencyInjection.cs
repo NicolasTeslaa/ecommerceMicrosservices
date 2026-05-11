@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ECommerce.Shared.Protos;
 using Order.Application.Interfaces;
 using Order.Infrastructure.Clients;
@@ -17,18 +18,18 @@ public static class DependencyInjection
         bool enableOutboxDispatcher = false,
         bool enableProcessorConsumer = false)
     {
-        var writeConnectionString = GetRequiredConnectionString(configuration, "OrderWriteDb");
-        var readConnectionString = GetRequiredConnectionString(configuration, "OrderReadDb");
+        var writeConnectionString = GetConnectionStringOrFallback(configuration, "OrderWriteDb");
+        var readConnectionString = GetConnectionStringOrFallback(configuration, "OrderReadDb");
 
         services.AddDbContext<OrderWriteDbContext>(options =>
             options.UseMySql(
                 writeConnectionString,
-                ServerVersion.AutoDetect(writeConnectionString)));
+                new MySqlServerVersion(new Version(8, 0, 36))));
 
         services.AddDbContext<OrderReadDbContext>(options =>
             options.UseMySql(
                 readConnectionString,
-                ServerVersion.AutoDetect(readConnectionString)));
+                new MySqlServerVersion(new Version(8, 0, 36))));
 
         services.AddScoped<IOrderWriteRepository, OrderWriteRepository>();
         services.AddScoped<IOrderReadRepository, OrderReadRepository>();
@@ -68,12 +69,17 @@ public static class DependencyInjection
         return services;
     }
 
-    private static string GetRequiredConnectionString(IConfiguration configuration, string connectionStringName)
+    private static string GetConnectionStringOrFallback(IConfiguration configuration, string connectionStringName)
     {
         var connectionString = configuration.GetConnectionString(connectionStringName);
 
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException($"Connection string '{connectionStringName}' was not configured.");
+        {
+            using var loggerFactory = LoggerFactory.Create(_ => { });
+            loggerFactory.CreateLogger("Order.Infrastructure.Configuration.DependencyInjection")
+                .LogError("Connection string '{ConnectionStringName}' was not configured. Using a fallback connection string.", connectionStringName);
+            return $"Server=localhost;Port=3306;Database={connectionStringName.ToLowerInvariant()}_fallback;Uid=root;Pwd=root;";
+        }
 
         return connectionString;
     }

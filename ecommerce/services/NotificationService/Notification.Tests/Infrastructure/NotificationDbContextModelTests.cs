@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Notification.Infrastructure.Persistence;
+using Xunit;
 
 namespace Notification.Tests.Infrastructure;
 

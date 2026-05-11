@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Notification.Domain.Enums;
 
 namespace Notification.Domain.Entities;
@@ -23,15 +24,7 @@ public class EmailNotification
     {
     }
 
-    public EmailNotification(
-        Guid orderId,
-        Guid customerId,
-        string sourceTopic,
-        string eventType,
-        string recipientEmail,
-        string subject,
-        string body,
-        string deduplicationKey)
+    public EmailNotification(Guid orderId, Guid customerId, string sourceTopic, string eventType, string recipientEmail, string subject, string body, string deduplicationKey)
     {
         Id = Guid.NewGuid();
         OrderId = orderId;
@@ -65,9 +58,9 @@ public class EmailNotification
     private static string RequireValue(string value, string paramName, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"{paramName} is required.");
+            Trace.TraceError("{0} is required.", paramName);
 
-        var sanitized = value.Trim();
+        var sanitized = (value ?? string.Empty).Trim();
         return sanitized.Length > maxLength ? sanitized[..maxLength] : sanitized;
     }
 }

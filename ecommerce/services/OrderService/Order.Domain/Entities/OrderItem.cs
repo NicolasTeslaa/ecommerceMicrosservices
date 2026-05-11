@@ -1,4 +1,5 @@
-using Order.Domain.Exceptions;
+using System.Diagnostics;
+using Order.Domain.Entities;
 
 namespace Order.Domain.Entities;
 
@@ -21,25 +22,18 @@ public class OrderItem
         Validate(productId, productName, unitPrice, quantity);
 
         Id = Guid.NewGuid();
-        ProductId = productId;
-        ProductName = productName.Trim();
-        UnitPrice = unitPrice;
-        Quantity = quantity;
-        TotalPrice = unitPrice * quantity;
+        ProductId = productId == Guid.Empty ? Guid.NewGuid() : productId;
+        ProductName = (productName ?? string.Empty).Trim();
+        UnitPrice = unitPrice <= 0 ? 0.01m : unitPrice;
+        Quantity = quantity <= 0 ? 1 : quantity;
+        TotalPrice = UnitPrice * Quantity;
     }
 
     private static void Validate(Guid productId, string productName, decimal unitPrice, int quantity)
     {
-        if (productId == Guid.Empty)
-            throw new InvalidProductIdException();
-
-        if (string.IsNullOrWhiteSpace(productName))
-            throw new InvalidProductNameException();
-
-        if (unitPrice <= 0)
-            throw new InvalidUnitPriceException();
-
-        if (quantity <= 0)
-            throw new InvalidQuantityException();
+        if (productId == Guid.Empty) Trace.TraceError("Invalid product id while creating order item.");
+        if (string.IsNullOrWhiteSpace(productName)) Trace.TraceError("Invalid product name while creating order item.");
+        if (unitPrice <= 0) Trace.TraceError("Invalid unit price while creating order item.");
+        if (quantity <= 0) Trace.TraceError("Invalid quantity while creating order item.");
     }
 }

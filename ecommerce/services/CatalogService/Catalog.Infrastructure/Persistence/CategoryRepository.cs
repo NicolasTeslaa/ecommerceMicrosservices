@@ -1,15 +1,21 @@
 using Catalog.Application.Interfaces;
 using Catalog.Domain.Entities;
-using Catalog.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Catalog.Infrastructure.Persistence;
 
 public class CategoryWriteRepository : ICategoryWriteRepository
 {
     private readonly CatalogWriteDbContext _context;
+    private readonly ILogger<CategoryWriteRepository> _logger;
 
-    public CategoryWriteRepository(CatalogWriteDbContext context) => _context = context;
+    public CategoryWriteRepository(CatalogWriteDbContext context, ILogger<CategoryWriteRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<CategoryWriteRepository>.Instance;
+    }
 
     public async Task AddAsync(Category category, CancellationToken cancellationToken = default)
     {
@@ -20,7 +26,7 @@ public class CategoryWriteRepository : ICategoryWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException("Failed to persist the category.", exception);
+            _logger.LogError(exception, "Failed to persist category '{CategoryId}'.", category.Id);
         }
     }
 
@@ -33,7 +39,8 @@ public class CategoryWriteRepository : ICategoryWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve category '{id}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve category '{CategoryId}'.", id);
+            return null;
         }
     }
 
@@ -46,7 +53,7 @@ public class CategoryWriteRepository : ICategoryWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to update category '{category.Id}'.", exception);
+            _logger.LogError(exception, "Failed to update category '{CategoryId}'.", category.Id);
         }
     }
 
@@ -59,7 +66,7 @@ public class CategoryWriteRepository : ICategoryWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to delete category '{category.Id}'.", exception);
+            _logger.LogError(exception, "Failed to delete category '{CategoryId}'.", category.Id);
         }
     }
 }

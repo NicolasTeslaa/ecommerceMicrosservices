@@ -1,4 +1,4 @@
-using Shipping.Domain.Exceptions;
+﻿using System.Diagnostics;
 
 namespace Shipping.Domain.Models;
 
@@ -12,7 +12,10 @@ public class ShippingQuote
     public ShippingQuote(string provider, decimal amount, int estimatedDays)
     {
         if (string.IsNullOrWhiteSpace(provider))
-            throw new ProviderNotSupportedException("unknown");
+        {
+            Trace.TraceError("ShippingQuote received an empty provider. Falling back to 'unknown'.");
+            provider = "unknown";
+        }
 
         Provider = provider.Trim();
         Amount = decimal.Round(Math.Max(amount, 0.01m), 2, MidpointRounding.AwayFromZero);

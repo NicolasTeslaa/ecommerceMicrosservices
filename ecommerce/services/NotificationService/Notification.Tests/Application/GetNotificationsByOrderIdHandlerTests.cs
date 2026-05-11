@@ -2,6 +2,7 @@ using Notification.Application.Handlers;
 using Notification.Application.Interfaces;
 using Notification.Application.Queries;
 using Notification.Domain.Entities;
+using Xunit;
 
 namespace Notification.Tests.Application;
 

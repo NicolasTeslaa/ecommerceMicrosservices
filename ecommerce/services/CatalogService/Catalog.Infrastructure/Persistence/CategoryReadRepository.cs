@@ -1,16 +1,22 @@
 using Catalog.Application.Interfaces;
 using Catalog.Application.ReadModels;
-using Catalog.Domain.Exceptions;
 using ECommerce.Shared.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Catalog.Infrastructure.Persistence;
 
 public class CategoryReadRepository : ICategoryReadRepository
 {
     private readonly CatalogReadDbContext _context;
+    private readonly ILogger<CategoryReadRepository> _logger;
 
-    public CategoryReadRepository(CatalogReadDbContext context) => _context = context;
+    public CategoryReadRepository(CatalogReadDbContext context, ILogger<CategoryReadRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<CategoryReadRepository>.Instance;
+    }
 
     public async Task<PagedResult<CategoryReadModel>> GetAllAsync(PaginationRequest pagination, CancellationToken cancellationToken = default)
     {
@@ -31,7 +37,8 @@ public class CategoryReadRepository : ICategoryReadRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException("Failed to retrieve categories from the read database.", exception);
+            _logger.LogError(exception, "Failed to retrieve categories from the read database.");
+            return PagedResult<CategoryReadModel>.Create(Array.Empty<CategoryReadModel>(), pagination.PageNumber, pagination.PageSize, 0);
         }
     }
 
@@ -45,7 +52,8 @@ public class CategoryReadRepository : ICategoryReadRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve category '{id}' from the read database.", exception);
+            _logger.LogError(exception, "Failed to retrieve category '{CategoryId}' from the read database.", id);
+            return null;
         }
     }
 }

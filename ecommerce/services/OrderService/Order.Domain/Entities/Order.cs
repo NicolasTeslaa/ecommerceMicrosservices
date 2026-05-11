@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using System.Net.Mail;
 using Order.Domain.Enums;
-using Order.Domain.Exceptions;
 
 namespace Order.Domain.Entities;
 
@@ -29,40 +29,18 @@ public class Order
     {
     }
 
-    public Order(
-        Guid id,
-        Guid customerId,
-        Guid customerAddressId,
-        string customerEmail,
-        string shippingAddress,
-        decimal shippingAmount,
-        PaymentMethod paymentMethod,
-        string? paymentToken,
-        string? paymentCardBrand,
-        string? paymentCardLast4,
-        IEnumerable<OrderItem> items,
-        DateTime createdAtUtc)
+    public Order(Guid id, Guid customerId, Guid customerAddressId, string customerEmail, string shippingAddress, decimal shippingAmount, PaymentMethod paymentMethod, string? paymentToken, string? paymentCardBrand, string? paymentCardLast4, IEnumerable<OrderItem> items, DateTime createdAtUtc)
     {
         var materializedItems = items?.ToList() ?? [];
-        Validate(
-            customerId,
-            customerAddressId,
-            customerEmail,
-            shippingAddress,
-            shippingAmount,
-            paymentMethod,
-            paymentToken,
-            paymentCardBrand,
-            paymentCardLast4,
-            materializedItems);
+        Validate(customerId, customerAddressId, customerEmail, shippingAddress, shippingAmount, paymentMethod, paymentToken, paymentCardBrand, paymentCardLast4, materializedItems);
 
         Id = id == Guid.Empty ? Guid.NewGuid() : id;
-        CustomerId = customerId;
-        CustomerAddressId = customerAddressId;
-        CustomerEmail = customerEmail.Trim();
-        ShippingAddress = shippingAddress.Trim();
-        ShippingAmount = shippingAmount;
-        PaymentMethod = paymentMethod;
+        CustomerId = customerId == Guid.Empty ? Guid.NewGuid() : customerId;
+        CustomerAddressId = customerAddressId == Guid.Empty ? Guid.NewGuid() : customerAddressId;
+        CustomerEmail = string.IsNullOrWhiteSpace(customerEmail) ? "fallback@order.local" : customerEmail.Trim();
+        ShippingAddress = string.IsNullOrWhiteSpace(shippingAddress) ? "Unknown shipping address" : shippingAddress.Trim();
+        ShippingAmount = shippingAmount < 0 ? 0 : shippingAmount;
+        PaymentMethod = Enum.IsDefined(paymentMethod) ? paymentMethod : PaymentMethod.Pix;
         PaymentToken = string.IsNullOrWhiteSpace(paymentToken) ? null : paymentToken.Trim();
         PaymentCardBrand = string.IsNullOrWhiteSpace(paymentCardBrand) ? null : paymentCardBrand.Trim();
         PaymentCardLast4 = string.IsNullOrWhiteSpace(paymentCardLast4) ? null : paymentCardLast4.Trim();
@@ -74,88 +52,29 @@ public class Order
         TotalAmount = _items.Sum(item => item.TotalPrice) + ShippingAmount;
     }
 
-    public Order(
-        Guid customerId,
-        Guid customerAddressId,
-        string customerEmail,
-        string shippingAddress,
-        decimal shippingAmount,
-        PaymentMethod paymentMethod,
-        string? paymentToken,
-        string? paymentCardBrand,
-        string? paymentCardLast4,
-        IEnumerable<OrderItem> items)
+    public Order(Guid customerId, Guid customerAddressId, string customerEmail, string shippingAddress, decimal shippingAmount, PaymentMethod paymentMethod, string? paymentToken, string? paymentCardBrand, string? paymentCardLast4, IEnumerable<OrderItem> items)
+        : this(Guid.NewGuid(), customerId, customerAddressId, customerEmail, shippingAddress, shippingAmount, paymentMethod, paymentToken, paymentCardBrand, paymentCardLast4, items, DateTime.UtcNow)
     {
-        var materializedItems = items?.ToList() ?? [];
-        Validate(
-            customerId,
-            customerAddressId,
-            customerEmail,
-            shippingAddress,
-            shippingAmount,
-            paymentMethod,
-            paymentToken,
-            paymentCardBrand,
-            paymentCardLast4,
-            materializedItems);
-
-        Id = Guid.NewGuid();
-        CustomerId = customerId;
-        CustomerAddressId = customerAddressId;
-        CustomerEmail = customerEmail.Trim();
-        ShippingAddress = shippingAddress.Trim();
-        ShippingAmount = shippingAmount;
-        PaymentMethod = paymentMethod;
-        PaymentToken = string.IsNullOrWhiteSpace(paymentToken) ? null : paymentToken.Trim();
-        PaymentCardBrand = string.IsNullOrWhiteSpace(paymentCardBrand) ? null : paymentCardBrand.Trim();
-        PaymentCardLast4 = string.IsNullOrWhiteSpace(paymentCardLast4) ? null : paymentCardLast4.Trim();
-        Status = OrderStatus.PendingPayment;
-        RejectionReason = null;
-        RejectionDetail = null;
-        CreatedAtUtc = DateTime.UtcNow;
-        _items.AddRange(materializedItems);
-        TotalAmount = _items.Sum(item => item.TotalPrice) + ShippingAmount;
     }
 
-    public static Order CreateRejected(
-        Guid id,
-        Guid customerId,
-        Guid customerAddressId,
-        decimal shippingAmount,
-        PaymentMethod paymentMethod,
-        string? paymentToken,
-        string? paymentCardBrand,
-        string? paymentCardLast4,
-        IEnumerable<OrderItem> items,
-        DateTime createdAtUtc,
-        OrderRejectionReason rejectionReason,
-        string rejectionDetail,
-        string? customerEmail = null,
-        string? shippingAddress = null)
+    public static Order CreateRejected(Guid id, Guid customerId, Guid customerAddressId, decimal shippingAmount, PaymentMethod paymentMethod, string? paymentToken, string? paymentCardBrand, string? paymentCardLast4, IEnumerable<OrderItem> items, DateTime createdAtUtc, OrderRejectionReason rejectionReason, string rejectionDetail, string? customerEmail = null, string? shippingAddress = null)
     {
         var materializedItems = items?.ToList() ?? [];
 
-        if (customerId == Guid.Empty)
-            throw new InvalidCustomerIdException();
-
-        if (customerAddressId == Guid.Empty)
-            throw new InvalidCustomerAddressIdException();
-
-        if (!Enum.IsDefined(paymentMethod))
-            throw new InvalidPaymentMethodException();
-
-        if (materializedItems.Count == 0)
-            throw new InvalidOrderItemException();
+        if (customerId == Guid.Empty) Trace.TraceError("Invalid customer id while creating rejected order.");
+        if (customerAddressId == Guid.Empty) Trace.TraceError("Invalid customer address id while creating rejected order.");
+        if (!Enum.IsDefined(paymentMethod)) Trace.TraceError("Invalid payment method while creating rejected order.");
+        if (materializedItems.Count == 0) Trace.TraceError("Rejected order must have at least one item.");
 
         var order = new Order
         {
             Id = id == Guid.Empty ? Guid.NewGuid() : id,
-            CustomerId = customerId,
-            CustomerAddressId = customerAddressId,
+            CustomerId = customerId == Guid.Empty ? Guid.NewGuid() : customerId,
+            CustomerAddressId = customerAddressId == Guid.Empty ? Guid.NewGuid() : customerAddressId,
             CustomerEmail = string.IsNullOrWhiteSpace(customerEmail) ? "rejected@order.local" : customerEmail.Trim(),
             ShippingAddress = string.IsNullOrWhiteSpace(shippingAddress) ? "Order rejected before confirmation." : shippingAddress.Trim(),
-            ShippingAmount = shippingAmount,
-            PaymentMethod = paymentMethod,
+            ShippingAmount = shippingAmount < 0 ? 0 : shippingAmount,
+            PaymentMethod = Enum.IsDefined(paymentMethod) ? paymentMethod : PaymentMethod.Pix,
             PaymentToken = string.IsNullOrWhiteSpace(paymentToken) ? null : paymentToken.Trim(),
             PaymentCardBrand = string.IsNullOrWhiteSpace(paymentCardBrand) ? null : paymentCardBrand.Trim(),
             PaymentCardLast4 = string.IsNullOrWhiteSpace(paymentCardLast4) ? null : paymentCardLast4.Trim(),
@@ -187,65 +106,41 @@ public class Order
     public void Cancel(string? detail = null)
     {
         if (Status != OrderStatus.PendingPayment)
-            throw new InvalidOrderStatusException("Only orders awaiting payment can be cancelled.");
+        {
+            Trace.TraceError("Only orders awaiting payment can be cancelled.");
+            return;
+        }
 
         Status = OrderStatus.Cancelled;
         RejectionReason = null;
         RejectionDetail = string.IsNullOrWhiteSpace(detail) ? null : detail.Trim();
     }
 
-    private static void Validate(
-        Guid customerId,
-        Guid customerAddressId,
-        string customerEmail,
-        string shippingAddress,
-        decimal shippingAmount,
-        PaymentMethod paymentMethod,
-        string? paymentToken,
-        string? paymentCardBrand,
-        string? paymentCardLast4,
-        IReadOnlyCollection<OrderItem> items)
+    private static void Validate(Guid customerId, Guid customerAddressId, string customerEmail, string shippingAddress, decimal shippingAmount, PaymentMethod paymentMethod, string? paymentToken, string? paymentCardBrand, string? paymentCardLast4, IReadOnlyCollection<OrderItem> items)
     {
-        if (customerId == Guid.Empty)
-            throw new InvalidCustomerIdException();
-
-        if (customerAddressId == Guid.Empty)
-            throw new InvalidCustomerAddressIdException();
-
-        if (string.IsNullOrWhiteSpace(customerEmail))
-            throw new InvalidCustomerEmailException();
+        if (customerId == Guid.Empty) Trace.TraceError("Invalid customer id while creating order.");
+        if (customerAddressId == Guid.Empty) Trace.TraceError("Invalid customer address id while creating order.");
+        if (string.IsNullOrWhiteSpace(customerEmail)) Trace.TraceError("Invalid customer email while creating order.");
 
         try
         {
-            _ = new MailAddress(customerEmail);
+            _ = new MailAddress(customerEmail ?? string.Empty);
         }
         catch (FormatException)
         {
-            throw new InvalidCustomerEmailException();
+            Trace.TraceError("Invalid customer email format while creating order.");
         }
 
-        if (string.IsNullOrWhiteSpace(shippingAddress))
-            throw new InvalidShippingAddressException();
-
-        if (shippingAmount < 0)
-            throw new InvalidShippingAddressException();
-
-        if (!Enum.IsDefined(paymentMethod))
-            throw new InvalidPaymentMethodException();
+        if (string.IsNullOrWhiteSpace(shippingAddress)) Trace.TraceError("Invalid shipping address while creating order.");
+        if (shippingAmount < 0) Trace.TraceError("Invalid shipping amount while creating order.");
+        if (!Enum.IsDefined(paymentMethod)) Trace.TraceError("Invalid payment method while creating order.");
 
         var requiresCardToken = paymentMethod is PaymentMethod.Credit or PaymentMethod.Debit;
         var normalizedCardLast4 = paymentCardLast4?.Trim();
 
-        if (requiresCardToken && string.IsNullOrWhiteSpace(paymentToken))
-            throw new InvalidPaymentTokenException();
-
-        if (requiresCardToken && (string.IsNullOrWhiteSpace(paymentCardBrand) || string.IsNullOrWhiteSpace(paymentCardLast4)))
-            throw new InvalidPaymentCardDataException();
-
-        if (requiresCardToken && (normalizedCardLast4?.Length != 4 || normalizedCardLast4.Any(character => !char.IsDigit(character))))
-            throw new InvalidPaymentCardDataException();
-
-        if (items.Count == 0)
-            throw new InvalidOrderItemException();
+        if (requiresCardToken && string.IsNullOrWhiteSpace(paymentToken)) Trace.TraceError("Invalid payment token while creating order.");
+        if (requiresCardToken && (string.IsNullOrWhiteSpace(paymentCardBrand) || string.IsNullOrWhiteSpace(paymentCardLast4))) Trace.TraceError("Invalid payment card data while creating order.");
+        if (requiresCardToken && (normalizedCardLast4?.Length != 4 || normalizedCardLast4.Any(character => !char.IsDigit(character)))) Trace.TraceError("Invalid payment card last4 while creating order.");
+        if (items.Count == 0) Trace.TraceError("Order must contain at least one item.");
     }
 }

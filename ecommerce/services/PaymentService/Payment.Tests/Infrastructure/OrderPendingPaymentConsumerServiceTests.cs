@@ -106,11 +106,12 @@ public class OrderPendingPaymentConsumerServiceTests
     }
 
     [Fact]
-    public async Task ProcessMessageAsync_ShouldThrow_WhenStripeIntentCreationFails()
+    public async Task ProcessMessageAsync_ShouldLogAndSkip_WhenStripeIntentCreationFails()
     {
         await using var context = CreateDbContext();
         var services = new ServiceCollection();
         var stripeGateway = new Mock<IStripePaymentGateway>();
+        var notifier = new Mock<IPaymentRealtimeNotifier>();
         stripeGateway.Setup(item => item.CreatePaymentIntentAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<decimal>(), "brl", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("stripe down"));
 
@@ -118,7 +119,7 @@ public class OrderPendingPaymentConsumerServiceTests
         services.AddScoped<IPaymentRepository>(_ => new PaymentRepository(context));
         services.AddSingleton(stripeGateway.Object);
         services.AddSingleton(Mock.Of<IPaymentEventPublisher>());
-        services.AddSingleton(Mock.Of<IPaymentRealtimeNotifier>());
+        services.AddSingleton(notifier.Object);
 
         var provider = services.BuildServiceProvider();
         var service = new OrderPendingPaymentConsumerService(
@@ -126,10 +127,13 @@ public class OrderPendingPaymentConsumerServiceTests
             BuildConfiguration(),
             Mock.Of<ILogger<OrderPendingPaymentConsumerService>>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            InvokeProcessMessageAsync(service, provider, CreateConsumeResult(BuildOrderCreatedEvent("credit")), "group-a"));
+        await InvokeProcessMessageAsync(service, provider, CreateConsumeResult(BuildOrderCreatedEvent("credit")), "group-a");
 
+        var payment = await context.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.True(string.IsNullOrWhiteSpace(payment.StripePaymentIntentId));
         Assert.Empty(context.ProcessedKafkaMessages);
+        notifier.Verify(item => item.NotifyUpdatedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static async Task InvokeProcessMessageAsync(

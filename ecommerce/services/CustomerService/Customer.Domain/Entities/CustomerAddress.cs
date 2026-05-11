@@ -1,4 +1,4 @@
-using Customer.Domain.Exceptions;
+using System.Diagnostics;
 
 namespace Customer.Domain.Entities;
 
@@ -25,20 +25,7 @@ public class CustomerAddress
     {
     }
 
-    public CustomerAddress(
-        Guid customerId,
-        string label,
-        string recipientName,
-        string street,
-        string number,
-        string complement,
-        string neighborhood,
-        string city,
-        string state,
-        string zipCode,
-        string country,
-        string reference,
-        bool isDefault)
+    public CustomerAddress(Guid customerId, string label, string recipientName, string street, string number, string complement, string neighborhood, string city, string state, string zipCode, string country, string reference, bool isDefault)
     {
         Validate(label, recipientName, street, number, neighborhood, city, state, zipCode, country);
 
@@ -49,19 +36,7 @@ public class CustomerAddress
         UpdatedAtUtc = CreatedAtUtc;
     }
 
-    public void Update(
-        string label,
-        string recipientName,
-        string street,
-        string number,
-        string complement,
-        string neighborhood,
-        string city,
-        string state,
-        string zipCode,
-        string country,
-        string reference,
-        bool isDefault)
+    public void Update(string label, string recipientName, string street, string number, string complement, string neighborhood, string city, string state, string zipCode, string country, string reference, bool isDefault)
     {
         Validate(label, recipientName, street, number, neighborhood, city, state, zipCode, country);
         Apply(label, recipientName, street, number, complement, neighborhood, city, state, zipCode, country, reference, isDefault);
@@ -81,62 +56,32 @@ public class CustomerAddress
         return $"{RecipientName} - {Street}, {Number}{complement}, {Neighborhood}, {City}/{State}, {ZipCode}, {Country}{reference}";
     }
 
-    private void Apply(
-        string label,
-        string recipientName,
-        string street,
-        string number,
-        string complement,
-        string neighborhood,
-        string city,
-        string state,
-        string zipCode,
-        string country,
-        string reference,
-        bool isDefault)
+    private void Apply(string label, string recipientName, string street, string number, string complement, string neighborhood, string city, string state, string zipCode, string country, string reference, bool isDefault)
     {
-        Label = label.Trim();
-        RecipientName = recipientName.Trim();
-        Street = street.Trim();
-        Number = number.Trim();
+        Label = (label ?? string.Empty).Trim();
+        RecipientName = (recipientName ?? string.Empty).Trim();
+        Street = (street ?? string.Empty).Trim();
+        Number = (number ?? string.Empty).Trim();
         Complement = complement?.Trim() ?? string.Empty;
-        Neighborhood = neighborhood.Trim();
-        City = city.Trim();
-        State = state.Trim();
-        ZipCode = zipCode.Trim();
-        Country = country.Trim();
+        Neighborhood = (neighborhood ?? string.Empty).Trim();
+        City = (city ?? string.Empty).Trim();
+        State = (state ?? string.Empty).Trim();
+        ZipCode = (zipCode ?? string.Empty).Trim();
+        Country = (country ?? string.Empty).Trim();
         Reference = reference?.Trim() ?? string.Empty;
         IsDefault = isDefault;
     }
 
-    private static void Validate(
-        string label,
-        string recipientName,
-        string street,
-        string number,
-        string neighborhood,
-        string city,
-        string state,
-        string zipCode,
-        string country)
+    private static void Validate(string label, string recipientName, string street, string number, string neighborhood, string city, string state, string zipCode, string country)
     {
-        if (string.IsNullOrWhiteSpace(label))
-            throw new InvalidAddressLabelException();
-        if (string.IsNullOrWhiteSpace(recipientName))
-            throw new InvalidRecipientNameException();
-        if (string.IsNullOrWhiteSpace(street))
-            throw new InvalidStreetException();
-        if (string.IsNullOrWhiteSpace(number))
-            throw new InvalidNumberException();
-        if (string.IsNullOrWhiteSpace(neighborhood))
-            throw new InvalidNeighborhoodException();
-        if (string.IsNullOrWhiteSpace(city))
-            throw new InvalidCityException();
-        if (string.IsNullOrWhiteSpace(state))
-            throw new InvalidStateException();
-        if (string.IsNullOrWhiteSpace(zipCode))
-            throw new InvalidZipCodeException();
-        if (string.IsNullOrWhiteSpace(country))
-            throw new InvalidCountryException();
+        if (string.IsNullOrWhiteSpace(label)) Trace.TraceError("Invalid address label.");
+        if (string.IsNullOrWhiteSpace(recipientName)) Trace.TraceError("Invalid recipient name.");
+        if (string.IsNullOrWhiteSpace(street)) Trace.TraceError("Invalid street.");
+        if (string.IsNullOrWhiteSpace(number)) Trace.TraceError("Invalid number.");
+        if (string.IsNullOrWhiteSpace(neighborhood)) Trace.TraceError("Invalid neighborhood.");
+        if (string.IsNullOrWhiteSpace(city)) Trace.TraceError("Invalid city.");
+        if (string.IsNullOrWhiteSpace(state)) Trace.TraceError("Invalid state.");
+        if (string.IsNullOrWhiteSpace(zipCode)) Trace.TraceError("Invalid zip code.");
+        if (string.IsNullOrWhiteSpace(country)) Trace.TraceError("Invalid country.");
     }
 }

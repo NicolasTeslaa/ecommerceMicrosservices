@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Catalog.Domain.Entities;
 
@@ -18,19 +14,18 @@ public class Category
         Validate(name);
 
         Id = Guid.NewGuid();
-        Name = name.Trim();
+        Name = (name ?? string.Empty).Trim();
     }
 
     public void Update(string name)
     {
         Validate(name);
-
-        Name = name.Trim();
+        Name = (name ?? string.Empty).Trim();
     }
 
     private static void Validate(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new Catalog.Domain.Exceptions.InvalidCategoryNameException();
+            Trace.TraceError("Invalid category name.");
     }
 }

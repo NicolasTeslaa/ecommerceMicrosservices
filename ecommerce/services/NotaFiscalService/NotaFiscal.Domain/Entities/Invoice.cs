@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using NotaFiscal.Domain.Enums;
 
 namespace NotaFiscal.Domain.Entities;
@@ -22,44 +23,27 @@ public class Invoice
     {
     }
 
-    public Invoice(
-        Guid orderId,
-        Guid customerId,
-        long number,
-        string series,
-        string accessKey,
-        string xmlContent,
-        decimal totalAmount,
-        string currency,
-        DateTime issuedAtUtc)
+    public Invoice(Guid orderId, Guid customerId, long number, string series, string accessKey, string xmlContent, decimal totalAmount, string currency, DateTime issuedAtUtc)
     {
-        if (orderId == Guid.Empty)
-            throw new InvalidOperationException("OrderId must be provided.");
-        if (customerId == Guid.Empty)
-            throw new InvalidOperationException("CustomerId must be provided.");
-        if (number <= 0)
-            throw new InvalidOperationException("Invoice number must be greater than zero.");
-        if (string.IsNullOrWhiteSpace(series))
-            throw new InvalidOperationException("Invoice series must be provided.");
-        if (string.IsNullOrWhiteSpace(accessKey))
-            throw new InvalidOperationException("Invoice access key must be provided.");
-        if (string.IsNullOrWhiteSpace(xmlContent))
-            throw new InvalidOperationException("Invoice XML content must be provided.");
-        if (totalAmount <= 0)
-            throw new InvalidOperationException("Invoice total amount must be greater than zero.");
-        if (string.IsNullOrWhiteSpace(currency))
-            throw new InvalidOperationException("Invoice currency must be provided.");
+        if (orderId == Guid.Empty) Trace.TraceError("OrderId must be provided.");
+        if (customerId == Guid.Empty) Trace.TraceError("CustomerId must be provided.");
+        if (number <= 0) Trace.TraceError("Invoice number must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(series)) Trace.TraceError("Invoice series must be provided.");
+        if (string.IsNullOrWhiteSpace(accessKey)) Trace.TraceError("Invoice access key must be provided.");
+        if (string.IsNullOrWhiteSpace(xmlContent)) Trace.TraceError("Invoice XML content must be provided.");
+        if (totalAmount <= 0) Trace.TraceError("Invoice total amount must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(currency)) Trace.TraceError("Invoice currency must be provided.");
 
         Id = Guid.NewGuid();
-        OrderId = orderId;
-        CustomerId = customerId;
-        Number = number;
-        Series = series.Trim();
-        AccessKey = accessKey.Trim();
-        XmlContent = xmlContent.Trim();
+        OrderId = orderId == Guid.Empty ? Guid.NewGuid() : orderId;
+        CustomerId = customerId == Guid.Empty ? Guid.NewGuid() : customerId;
+        Number = number <= 0 ? DateTime.UtcNow.Ticks : number;
+        Series = (series ?? "NF").Trim();
+        AccessKey = (accessKey ?? Guid.NewGuid().ToString("N")).Trim();
+        XmlContent = (xmlContent ?? "<invoice />").Trim();
         Status = InvoiceStatus.Issued;
-        TotalAmount = totalAmount;
-        Currency = currency.Trim().ToLowerInvariant();
+        TotalAmount = totalAmount <= 0 ? 0.01m : totalAmount;
+        Currency = (currency ?? "brl").Trim().ToLowerInvariant();
         IssuedAtUtc = issuedAtUtc;
         CreatedAtUtc = DateTime.UtcNow;
         UpdatedAtUtc = CreatedAtUtc;

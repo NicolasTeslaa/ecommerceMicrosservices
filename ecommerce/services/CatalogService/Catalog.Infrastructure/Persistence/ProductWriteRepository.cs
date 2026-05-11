@@ -1,15 +1,21 @@
 using Catalog.Application.Interfaces;
 using Catalog.Domain.Entities;
-using Catalog.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Catalog.Infrastructure.Persistence;
 
 public class ProductWriteRepository : IProductWriteRepository
 {
     private readonly CatalogWriteDbContext _context;
+    private readonly ILogger<ProductWriteRepository> _logger;
 
-    public ProductWriteRepository(CatalogWriteDbContext context) => _context = context;
+    public ProductWriteRepository(CatalogWriteDbContext context, ILogger<ProductWriteRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<ProductWriteRepository>.Instance;
+    }
 
     public async Task AddAsync(Product product, CancellationToken cancellationToken = default)
     {
@@ -20,7 +26,7 @@ public class ProductWriteRepository : IProductWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException("Failed to persist the product.", exception);
+            _logger.LogError(exception, "Failed to persist product '{ProductId}'.", product.Id);
         }
     }
 
@@ -57,7 +63,8 @@ public class ProductWriteRepository : IProductWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException("Failed to search for an equivalent product.", exception);
+            _logger.LogError(exception, "Failed to search for an equivalent product.");
+            return null;
         }
     }
 
@@ -70,7 +77,8 @@ public class ProductWriteRepository : IProductWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve product '{id}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve product '{ProductId}'.", id);
+            return null;
         }
     }
 
@@ -83,7 +91,7 @@ public class ProductWriteRepository : IProductWriteRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to update product '{product.Id}'.", exception);
+            _logger.LogError(exception, "Failed to update product '{ProductId}'.", product.Id);
         }
     }
 }

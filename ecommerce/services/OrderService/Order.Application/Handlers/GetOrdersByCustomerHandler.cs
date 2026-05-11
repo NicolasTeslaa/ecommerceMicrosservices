@@ -3,7 +3,6 @@ using MediatR;
 using Order.Application.DTOs;
 using Order.Application.Interfaces;
 using Order.Application.Queries;
-using Order.Domain.Exceptions;
 
 namespace Order.Application.Handlers;
 
@@ -19,7 +18,7 @@ public class GetOrdersByCustomerHandler : IRequestHandler<GetOrdersByCustomerQue
     public async Task<PagedResult<OrderDto>> Handle(GetOrdersByCustomerQuery request, CancellationToken cancellationToken)
     {
         if (request.CustomerId == Guid.Empty)
-            throw new InvalidCustomerIdException();
+            return PagedResult<OrderDto>.Create(Array.Empty<OrderDto>(), request.PageNumber, request.PageSize, 0);
 
         var orders = await _repository.GetByCustomerIdAsync(request.CustomerId, request, cancellationToken);
         return orders.Map(order => order.ToDto());

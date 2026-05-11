@@ -1,7 +1,6 @@
 using Customer.Application.Commands;
 using Customer.Application.DTOs;
 using Customer.Application.Interfaces;
-using Customer.Domain.Exceptions;
 using MediatR;
 
 namespace Customer.Application.Handlers;
@@ -17,8 +16,15 @@ public class UpsertCustomerAddressHandler : IRequestHandler<UpsertCustomerAddres
 
     public async Task<CustomerAddressDto> Handle(UpsertCustomerAddressCommand request, CancellationToken cancellationToken)
     {
-        var customer = await _repository.GetByIdAsync(request.CustomerId, cancellationToken)
-            ?? throw new CustomerNotFoundException(request.CustomerId);
+        var customer = await _repository.GetByIdAsync(request.CustomerId, cancellationToken);
+        if (customer is null)
+            return new CustomerAddressDto
+            {
+                CustomerId = request.CustomerId,
+                Id = request.AddressId ?? Guid.Empty,
+                Label = request.Label ?? string.Empty,
+                RecipientName = request.RecipientName ?? string.Empty
+            };
 
         var address = request.AddressId.HasValue && request.AddressId.Value != Guid.Empty
             ? customer.UpdateAddress(

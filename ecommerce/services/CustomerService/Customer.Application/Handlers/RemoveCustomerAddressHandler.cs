@@ -1,6 +1,5 @@
 using Customer.Application.Commands;
 using Customer.Application.Interfaces;
-using Customer.Domain.Exceptions;
 using MediatR;
 
 namespace Customer.Application.Handlers;
@@ -16,8 +15,9 @@ public class RemoveCustomerAddressHandler : IRequestHandler<RemoveCustomerAddres
 
     public async Task<Unit> Handle(RemoveCustomerAddressCommand request, CancellationToken cancellationToken)
     {
-        var customer = await _repository.GetByIdAsync(request.CustomerId, cancellationToken)
-            ?? throw new CustomerNotFoundException(request.CustomerId);
+        var customer = await _repository.GetByIdAsync(request.CustomerId, cancellationToken);
+        if (customer is null)
+            return Unit.Value;
 
         customer.RemoveAddress(request.AddressId);
         await _repository.UpdateAsync(customer, cancellationToken);

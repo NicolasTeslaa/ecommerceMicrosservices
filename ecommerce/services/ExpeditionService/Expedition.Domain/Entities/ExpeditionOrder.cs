@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Expedition.Domain.Enums;
 
 namespace Expedition.Domain.Entities;
@@ -12,115 +13,68 @@ public class ExpeditionOrder
     public string InvoiceSeries { get; private set; } = string.Empty;
     public string InvoiceAccessKey { get; private set; } = string.Empty;
     public ExpeditionStatus Status { get; private set; }
-    public DeliveryFailureReason FailureReason { get; private set; }
-    public string FailureDetails { get; private set; } = string.Empty;
-    public DateTime InvoiceIssuedAtUtc { get; private set; }
+    public DeliveryFailureReason? DeliveryFailureReason { get; private set; }
+    public string? DeliveryFailureDetails { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
-    public DateTime? PickedUpAtUtc { get; private set; }
-    public DateTime? InTransitAtUtc { get; private set; }
-    public DateTime? DeliveredAtUtc { get; private set; }
-    public DateTime? FailedAtUtc { get; private set; }
 
     private ExpeditionOrder()
     {
     }
 
-    public ExpeditionOrder(
-        Guid orderId,
-        Guid invoiceId,
-        Guid customerId,
-        long invoiceNumber,
-        string invoiceSeries,
-        string invoiceAccessKey,
-        DateTime invoiceIssuedAtUtc)
+    public ExpeditionOrder(Guid orderId, Guid invoiceId, Guid customerId, long invoiceNumber, string invoiceSeries, string invoiceAccessKey)
     {
-        if (orderId == Guid.Empty)
-            throw new InvalidOperationException("OrderId must be provided.");
-        if (invoiceId == Guid.Empty)
-            throw new InvalidOperationException("InvoiceId must be provided.");
-        if (customerId == Guid.Empty)
-            throw new InvalidOperationException("CustomerId must be provided.");
-        if (invoiceNumber <= 0)
-            throw new InvalidOperationException("InvoiceNumber must be greater than zero.");
-        if (string.IsNullOrWhiteSpace(invoiceSeries))
-            throw new InvalidOperationException("InvoiceSeries must be provided.");
-        if (string.IsNullOrWhiteSpace(invoiceAccessKey))
-            throw new InvalidOperationException("InvoiceAccessKey must be provided.");
+        if (orderId == Guid.Empty) Trace.TraceError("OrderId must be provided.");
+        if (invoiceId == Guid.Empty) Trace.TraceError("InvoiceId must be provided.");
+        if (customerId == Guid.Empty) Trace.TraceError("CustomerId must be provided.");
+        if (invoiceNumber <= 0) Trace.TraceError("InvoiceNumber must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(invoiceSeries)) Trace.TraceError("InvoiceSeries must be provided.");
+        if (string.IsNullOrWhiteSpace(invoiceAccessKey)) Trace.TraceError("InvoiceAccessKey must be provided.");
 
         Id = Guid.NewGuid();
-        OrderId = orderId;
-        InvoiceId = invoiceId;
-        CustomerId = customerId;
-        InvoiceNumber = invoiceNumber;
-        InvoiceSeries = invoiceSeries.Trim();
-        InvoiceAccessKey = invoiceAccessKey.Trim();
-        Status = ExpeditionStatus.AwaitingCarrierPickup;
-        FailureReason = DeliveryFailureReason.None;
-        InvoiceIssuedAtUtc = invoiceIssuedAtUtc;
+        OrderId = orderId == Guid.Empty ? Guid.NewGuid() : orderId;
+        InvoiceId = invoiceId == Guid.Empty ? Guid.NewGuid() : invoiceId;
+        CustomerId = customerId == Guid.Empty ? Guid.NewGuid() : customerId;
+        InvoiceNumber = invoiceNumber <= 0 ? DateTime.UtcNow.Ticks : invoiceNumber;
+        InvoiceSeries = (invoiceSeries ?? "NF").Trim();
+        InvoiceAccessKey = (invoiceAccessKey ?? Guid.NewGuid().ToString("N")).Trim();
+        Status = ExpeditionStatus.Pending;
         CreatedAtUtc = DateTime.UtcNow;
         UpdatedAtUtc = CreatedAtUtc;
     }
 
     public void MarkAsPickedUp()
     {
-        EnsureCurrentStatus(ExpeditionStatus.AwaitingCarrierPickup, "Only expeditions awaiting pickup can be marked as picked up.");
-
-        Status = ExpeditionStatus.PickedUpByCarrier;
-        PickedUpAtUtc = DateTime.UtcNow;
-        ClearFailure();
-        Touch();
+        Status = ExpeditionStatus.PickedUp;
+        DeliveryFailureReason = null;
+        DeliveryFailureDetails = null;
+        UpdatedAtUtc = DateTime.UtcNow;
     }
 
     public void MarkAsInTransit()
     {
-        EnsureCurrentStatus(ExpeditionStatus.PickedUpByCarrier, "Only picked up expeditions can move to in transit.");
-
         Status = ExpeditionStatus.InTransit;
-        InTransitAtUtc = DateTime.UtcNow;
-        ClearFailure();
-        Touch();
+        DeliveryFailureReason = null;
+        DeliveryFailureDetails = null;
+        UpdatedAtUtc = DateTime.UtcNow;
     }
 
     public void MarkAsDelivered()
     {
-        EnsureCurrentStatus(ExpeditionStatus.InTransit, "Only expeditions in transit can be marked as delivered.");
-
         Status = ExpeditionStatus.Delivered;
-        DeliveredAtUtc = DateTime.UtcNow;
-        ClearFailure();
-        Touch();
+        DeliveryFailureReason = null;
+        DeliveryFailureDetails = null;
+        UpdatedAtUtc = DateTime.UtcNow;
     }
 
-    public void MarkAsDeliveryFailed(DeliveryFailureReason reason, string? details)
+    public void MarkAsDeliveryFailed(DeliveryFailureReason? failureReason, string? failureDetails)
     {
-        EnsureCurrentStatus(ExpeditionStatus.InTransit, "Only expeditions in transit can be marked as delivery failed.");
-
-        if (reason == DeliveryFailureReason.None)
-            throw new InvalidOperationException("A failure reason must be provided for a failed delivery.");
+        if (failureReason is null)
+            Trace.TraceError("A failure reason must be provided for a failed delivery.");
 
         Status = ExpeditionStatus.DeliveryFailed;
-        FailureReason = reason;
-        FailureDetails = details?.Trim() ?? string.Empty;
-        FailedAtUtc = DateTime.UtcNow;
-        Touch();
-    }
-
-    private void EnsureCurrentStatus(ExpeditionStatus expectedStatus, string message)
-    {
-        if (Status != expectedStatus)
-            throw new InvalidOperationException(message);
-    }
-
-    private void ClearFailure()
-    {
-        FailureReason = DeliveryFailureReason.None;
-        FailureDetails = string.Empty;
-        FailedAtUtc = null;
-    }
-
-    private void Touch()
-    {
+        DeliveryFailureReason = failureReason ?? Expedition.Domain.Enums.DeliveryFailureReason.Other;
+        DeliveryFailureDetails = string.IsNullOrWhiteSpace(failureDetails) ? DeliveryFailureReason.ToString() : failureDetails.Trim();
         UpdatedAtUtc = DateTime.UtcNow;
     }
 }

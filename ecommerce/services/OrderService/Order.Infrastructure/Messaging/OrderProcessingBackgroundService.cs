@@ -139,8 +139,14 @@ public class OrderProcessingBackgroundService : BackgroundService
     {
         try
         {
-            var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(message.Payload)
-                ?? throw new InvalidOperationException($"Outbox message '{message.Id}' has an invalid payload.");
+            var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(message.Payload);
+            if (request is null)
+            {
+                message.RegisterProcessingFailure("Invalid order processing payload.");
+                await writeDbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogError("Outbox message '{OutboxMessageId}' has an invalid payload.", message.Id);
+                return;
+            }
 
             var customerAddressValidationClient = serviceProvider.GetRequiredService<ICustomerAddressValidationClient>();
             var readModelProjector = serviceProvider.GetRequiredService<IOrderReadModelProjector>();

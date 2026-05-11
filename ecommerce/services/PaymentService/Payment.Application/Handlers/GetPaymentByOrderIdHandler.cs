@@ -2,7 +2,6 @@ using MediatR;
 using Payment.Application.DTOs;
 using Payment.Application.Interfaces;
 using Payment.Application.Queries;
-using Payment.Domain.Exceptions;
 
 namespace Payment.Application.Handlers;
 
@@ -15,12 +14,12 @@ public class GetPaymentByOrderIdHandler : IRequestHandler<GetPaymentByOrderIdQue
     public async Task<PaymentDto?> Handle(GetPaymentByOrderIdQuery request, CancellationToken cancellationToken)
     {
         if (request.OrderId == Guid.Empty)
-            throw new InvalidOrderIdException();
+            return new PaymentDto { OrderId = Guid.Empty };
 
         var payment = await _repository.GetByOrderIdAsync(request.OrderId, cancellationToken);
 
         if (payment is null)
-            return null;
+            return new PaymentDto { OrderId = request.OrderId };
 
         return new PaymentDto
         {

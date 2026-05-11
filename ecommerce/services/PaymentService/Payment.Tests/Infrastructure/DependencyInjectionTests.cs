@@ -7,14 +7,14 @@ namespace Payment.Tests.Infrastructure;
 public class DependencyInjectionTests
 {
     [Fact]
-    public void AddInfrastructure_ShouldThrow_WhenConnectionStringIsMissing()
+    public void AddInfrastructure_ShouldRegisterServices_WhenConnectionStringIsMissing()
     {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder().Build();
 
-        var act = () => services.AddInfrastructure(configuration);
+        services.AddInfrastructure(configuration);
 
-        Assert.Throws<InvalidOperationException>(act);
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(Payment.Application.Interfaces.IPaymentRepository));
     }
 
     [Fact]

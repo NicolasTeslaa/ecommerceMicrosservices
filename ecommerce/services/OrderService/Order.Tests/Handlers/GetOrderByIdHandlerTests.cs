@@ -5,7 +5,6 @@ using Order.Application.Interfaces;
 using Order.Application.Queries;
 using Order.Application.ReadModels;
 using Order.Domain.Enums;
-using Order.Domain.Exceptions;
 using Order.Tests.Support;
 
 namespace Order.Tests.Handlers;
@@ -56,15 +55,16 @@ public class GetOrderByIdHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldThrowInvalidOrderIdException_WhenOrderIdIsEmpty()
+    public async Task Handle_ShouldReturnFallbackOrder_WhenOrderIdIsEmpty()
     {
-        var act = () => _handler.Handle(new GetOrderByIdQuery(Guid.Empty), CancellationToken.None);
+        var result = await _handler.Handle(new GetOrderByIdQuery(Guid.Empty), CancellationToken.None);
 
-        await Assert.ThrowsAsync<InvalidOrderIdException>(act);
+        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Empty(result.Items);
     }
 
     [Fact]
-    public async Task Handle_ShouldThrowOrderNotFoundException_WhenRepositoryReturnsNull()
+    public async Task Handle_ShouldReturnFallbackOrder_WhenRepositoryReturnsNull()
     {
         var orderId = Guid.NewGuid();
 
@@ -72,8 +72,10 @@ public class GetOrderByIdHandlerTests
             .Setup(repository => repository.GetByIdAsync(orderId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((OrderReadModel?)null);
 
-        var act = () => _handler.Handle(new GetOrderByIdQuery(orderId), CancellationToken.None);
+        var result = await _handler.Handle(new GetOrderByIdQuery(orderId), CancellationToken.None);
 
-        await Assert.ThrowsAsync<OrderNotFoundException>(act);
+        Assert.Equal(orderId, result.Id);
+        Assert.Empty(result.Items);
+        Assert.Equal("Order not available.", result.RejectionDetail);
     }
 }

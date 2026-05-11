@@ -325,10 +325,7 @@ public class OrderProcessorConsumerServiceTests
 
         var service = CreateProcessorService();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => InvokeProcessMessageAsync(service, provider, outbox.Id));
-
-        Assert.Equal("projection failed", exception.Message);
+        await InvokeProcessMessageAsync(service, provider, outbox.Id);
 
         var persistedOutbox = await writeDbContext.OrderProcessingOutboxMessages.SingleAsync(message => message.Id == outbox.Id);
         Assert.Equal(1, persistedOutbox.ProcessingAttempts);

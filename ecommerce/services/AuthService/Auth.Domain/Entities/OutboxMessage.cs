@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Auth.Domain.Entities;
 
 public class OutboxMessage
@@ -29,15 +31,17 @@ public class OutboxMessage
     public static OutboxMessage Create(string topic, string key, string type, string payload)
     {
         if (string.IsNullOrWhiteSpace(topic))
-            throw new ArgumentException("Topic is required.", nameof(topic));
-
+            Trace.TraceError("Outbox topic is required.");
         if (string.IsNullOrWhiteSpace(type))
-            throw new ArgumentException("Type is required.", nameof(type));
-
+            Trace.TraceError("Outbox type is required.");
         if (string.IsNullOrWhiteSpace(payload))
-            throw new ArgumentException("Payload is required.", nameof(payload));
+            Trace.TraceError("Outbox payload is required.");
 
-        return new OutboxMessage(topic, key, type, payload);
+        return new OutboxMessage(
+            topic?.Trim() ?? "fallback-topic",
+            key?.Trim() ?? string.Empty,
+            type?.Trim() ?? "fallback-type",
+            payload?.Trim() ?? "{}");
     }
 
     public void MarkAsPublished()

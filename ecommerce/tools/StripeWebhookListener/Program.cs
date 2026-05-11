@@ -57,7 +57,9 @@ try
 {
     if (!stripeProcess.Start())
     {
-        throw new InvalidOperationException("The Stripe CLI process could not be started.");
+        Console.Error.WriteLine($"[{Timestamp()}] The Stripe CLI process could not be started.");
+        Environment.ExitCode = 1;
+        return;
     }
 }
 catch (Exception ex)

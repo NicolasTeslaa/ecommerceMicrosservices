@@ -2,16 +2,19 @@ using Customer.Application.Interfaces;
 using Customer.Domain.Exceptions;
 using ECommerce.Shared.Protos;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 
 namespace Customer.API.Grpc;
 
 public class CustomerAddressValidationGrpcService : CustomerAddressValidation.CustomerAddressValidationBase
 {
     private readonly ICustomerRepository _repository;
+    private readonly ILogger<CustomerAddressValidationGrpcService> _logger;
 
-    public CustomerAddressValidationGrpcService(ICustomerRepository repository)
+    public CustomerAddressValidationGrpcService(ICustomerRepository repository, ILogger<CustomerAddressValidationGrpcService> logger)
     {
         _repository = repository;
+        _logger = logger;
     }
 
     public override async Task<ValidateCustomerAddressReply> ValidateAddress(ValidateCustomerAddressRequest request, ServerCallContext context)
@@ -19,8 +22,18 @@ public class CustomerAddressValidationGrpcService : CustomerAddressValidation.Cu
         var customerId = Guid.Parse(request.CustomerId);
         var addressId = Guid.Parse(request.AddressId);
 
-        var customer = await _repository.GetByIdAsync(customerId, context.CancellationToken)
-            ?? throw new RpcException(new Status(StatusCode.NotFound, $"Customer '{customerId}' was not found."));
+        var customer = await _repository.GetByIdAsync(customerId, context.CancellationToken);
+        if (customer is null)
+        {
+            _logger.LogError("Customer '{CustomerId}' was not found during gRPC address validation.", customerId);
+            return new ValidateCustomerAddressReply
+            {
+                CustomerId = customerId.ToString(),
+                AddressId = addressId.ToString(),
+                CustomerEmail = string.Empty,
+                FormattedAddress = string.Empty
+            };
+        }
 
         try
         {
@@ -47,7 +60,14 @@ public class CustomerAddressValidationGrpcService : CustomerAddressValidation.Cu
         }
         catch (CustomerAddressNotFoundException exception)
         {
-            throw new RpcException(new Status(StatusCode.NotFound, exception.Message));
+            _logger.LogError(exception, "Address '{AddressId}' for customer '{CustomerId}' was not found during gRPC validation.", addressId, customerId);
+            return new ValidateCustomerAddressReply
+            {
+                CustomerId = customerId.ToString(),
+                AddressId = addressId.ToString(),
+                CustomerEmail = customer.Email,
+                FormattedAddress = string.Empty
+            };
         }
     }
 }

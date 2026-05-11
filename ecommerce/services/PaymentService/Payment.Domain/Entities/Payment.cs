@@ -1,5 +1,5 @@
-using Payment.Domain.Enums;
-using Payment.Domain.Exceptions;
+﻿using Payment.Domain.Enums;
+using System.Diagnostics;
 
 namespace Payment.Domain.Entities;
 
@@ -33,11 +33,11 @@ public class Payment
         Validate(orderId, customerId, amount, currency, paymentMethod);
 
         Id = Guid.NewGuid();
-        OrderId = orderId;
-        CustomerId = customerId;
-        Amount = amount;
-        Currency = currency.Trim().ToLowerInvariant();
-        PaymentMethod = paymentMethod;
+        OrderId = orderId == Guid.Empty ? Guid.NewGuid() : orderId;
+        CustomerId = customerId == Guid.Empty ? Guid.NewGuid() : customerId;
+        Amount = amount <= 0 ? 0.01m : amount;
+        Currency = string.IsNullOrWhiteSpace(currency) || currency.Trim().Length != 3 ? "brl" : currency.Trim().ToLowerInvariant();
+        PaymentMethod = Enum.IsDefined(paymentMethod) ? paymentMethod : PaymentMethod.Unknown;
         Status = PaymentStatus.Pending;
         AttemptCount = 0;
         CreatedAtUtc = DateTime.UtcNow;
@@ -47,7 +47,10 @@ public class Payment
     public void SetPaymentIntent(string paymentIntentId, string clientSecret, string? paymentMethodId = null)
     {
         if (string.IsNullOrWhiteSpace(paymentIntentId) || string.IsNullOrWhiteSpace(clientSecret))
-            throw new InvalidPaymentIntentException();
+        {
+            LogSoftFailure("Payment received an invalid payment intent payload.");
+            return;
+        }
 
         StripePaymentIntentId = paymentIntentId.Trim();
         StripeClientSecret = clientSecret.Trim();
@@ -91,19 +94,21 @@ public class Payment
     private static void Validate(Guid orderId, Guid customerId, decimal amount, string currency, PaymentMethod paymentMethod)
     {
         if (orderId == Guid.Empty)
-            throw new InvalidOrderIdException();
+            LogSoftFailure("Payment received an empty order id.");
         if (customerId == Guid.Empty)
-            throw new InvalidCustomerIdException();
+            LogSoftFailure("Payment received an empty customer id.");
         if (amount <= 0)
-            throw new InvalidAmountException();
+            LogSoftFailure("Payment received a non-positive amount.");
         if (string.IsNullOrWhiteSpace(currency) || currency.Trim().Length != 3)
-            throw new InvalidCurrencyException();
+            LogSoftFailure("Payment received an invalid currency.");
         if (!Enum.IsDefined(paymentMethod))
-            throw new InvalidPaymentMethodException();
+            LogSoftFailure($"Payment received an invalid payment method '{paymentMethod}'.");
     }
 
     private void Touch()
     {
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    private static void LogSoftFailure(string message) => Trace.TraceError(message);
 }

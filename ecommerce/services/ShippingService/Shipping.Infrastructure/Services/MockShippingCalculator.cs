@@ -1,6 +1,6 @@
-using Shipping.Application.Interfaces;
-using Shipping.Domain.Exceptions;
+﻿using Shipping.Application.Interfaces;
 using Shipping.Domain.Models;
+using System.Diagnostics;
 
 namespace Shipping.Infrastructure.Services;
 
@@ -19,7 +19,10 @@ public class MockShippingCalculator : IShippingCalculator
         Validate(heightCm, widthCm, cubageM3, weightKg, originZipCode, destinationZipCode);
 
         if (!string.Equals(provider, "mock", StringComparison.OrdinalIgnoreCase))
-            throw new ProviderNotSupportedException(provider);
+        {
+            LogSoftFailure($"MockShippingCalculator received unsupported provider '{provider}'. Falling back to mock.");
+            provider = "mock";
+        }
 
         var distanceFactor = CalculateDistanceFactor(originZipCode, destinationZipCode);
         var amount = 12m + (distanceFactor * 3.75m) + (weightKg * 2.40m) + (cubageM3 * 420m) + ((heightCm + widthCm) * 0.08m);
@@ -43,17 +46,17 @@ public class MockShippingCalculator : IShippingCalculator
         string destinationZipCode)
     {
         if (heightCm <= 0)
-            throw new InvalidHeightException();
+            LogSoftFailure("MockShippingCalculator received a non-positive height.");
         if (widthCm <= 0)
-            throw new InvalidWidthException();
+            LogSoftFailure("MockShippingCalculator received a non-positive width.");
         if (cubageM3 <= 0)
-            throw new InvalidCubageException();
+            LogSoftFailure("MockShippingCalculator received a non-positive cubage.");
         if (weightKg <= 0)
-            throw new InvalidWeightException();
+            LogSoftFailure("MockShippingCalculator received a non-positive weight.");
         if (string.IsNullOrWhiteSpace(originZipCode))
-            throw new InvalidOriginZipCodeException();
+            LogSoftFailure("MockShippingCalculator received an empty origin zip code.");
         if (string.IsNullOrWhiteSpace(destinationZipCode))
-            throw new InvalidDestinationZipCodeException();
+            LogSoftFailure("MockShippingCalculator received an empty destination zip code.");
     }
 
     private static int CalculateDistanceFactor(string originZipCode, string destinationZipCode)
@@ -74,11 +77,13 @@ public class MockShippingCalculator : IShippingCalculator
 
     private static string NormalizeZipCode(string zipCode)
     {
-        var normalized = new string(zipCode.Where(char.IsDigit).ToArray());
+        var normalized = new string((zipCode ?? string.Empty).Where(char.IsDigit).ToArray());
 
         if (normalized.Length < 8)
             normalized = normalized.PadLeft(8, '0');
 
         return normalized;
     }
+
+    private static void LogSoftFailure(string message) => Trace.TraceError(message);
 }

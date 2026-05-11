@@ -1,5 +1,6 @@
 using Notification.Domain.Entities;
 using Notification.Domain.Enums;
+using Xunit;
 
 namespace Notification.Tests.Domain;
 

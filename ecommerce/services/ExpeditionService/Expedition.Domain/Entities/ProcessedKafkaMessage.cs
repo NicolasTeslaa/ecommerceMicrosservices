@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Expedition.Domain.Entities;
 
 public class ProcessedKafkaMessage
@@ -7,24 +9,31 @@ public class ProcessedKafkaMessage
     public int Partition { get; private set; }
     public long Offset { get; private set; }
     public string ConsumerGroup { get; private set; } = string.Empty;
+    public string MessageKey { get; private set; } = string.Empty;
+    public string MessageType { get; private set; } = string.Empty;
     public DateTime ProcessedAtUtc { get; private set; }
 
     private ProcessedKafkaMessage()
     {
     }
 
-    public ProcessedKafkaMessage(string topic, int partition, long offset, string consumerGroup)
+    public ProcessedKafkaMessage(string topic, int partition, long offset, string consumerGroup, string messageKey, string messageType)
     {
-        if (string.IsNullOrWhiteSpace(topic))
-            throw new InvalidOperationException("Topic must be provided.");
-        if (string.IsNullOrWhiteSpace(consumerGroup))
-            throw new InvalidOperationException("ConsumerGroup must be provided.");
-
         Id = Guid.NewGuid();
-        Topic = topic.Trim();
+        Topic = RequireValue(topic, nameof(topic));
         Partition = partition;
         Offset = offset;
-        ConsumerGroup = consumerGroup.Trim();
+        ConsumerGroup = RequireValue(consumerGroup, nameof(consumerGroup));
+        MessageKey = messageKey?.Trim() ?? string.Empty;
+        MessageType = messageType?.Trim() ?? string.Empty;
         ProcessedAtUtc = DateTime.UtcNow;
+    }
+
+    private static string RequireValue(string value, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            Trace.TraceError("{0} must be provided.", paramName);
+
+        return (value ?? string.Empty).Trim();
     }
 }

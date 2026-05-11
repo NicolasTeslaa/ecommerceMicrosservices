@@ -1,17 +1,23 @@
 using Catalog.Application.Interfaces;
 using Catalog.Application.Queries;
 using Catalog.Application.ReadModels;
-using Catalog.Domain.Exceptions;
 using ECommerce.Shared.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Catalog.Infrastructure.Persistence;
 
 public class ProductReadRepository : IProductReadRepository
 {
     private readonly CatalogReadDbContext _context;
+    private readonly ILogger<ProductReadRepository> _logger;
 
-    public ProductReadRepository(CatalogReadDbContext context) => _context = context;
+    public ProductReadRepository(CatalogReadDbContext context, ILogger<ProductReadRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<ProductReadRepository>.Instance;
+    }
 
     public async Task<PagedResult<ProductReadModel>> GetAllAsync(GetAllProductsQuery pagination, CancellationToken cancellationToken = default)
     {
@@ -49,7 +55,8 @@ public class ProductReadRepository : IProductReadRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException("Failed to retrieve products from the read database.", exception);
+            _logger.LogError(exception, "Failed to retrieve products from the read database.");
+            return PagedResult<ProductReadModel>.Create(Array.Empty<ProductReadModel>(), pagination.PageNumber, pagination.PageSize, 0);
         }
     }
 
@@ -64,7 +71,8 @@ public class ProductReadRepository : IProductReadRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve product '{id}' from the read database.", exception);
+            _logger.LogError(exception, "Failed to retrieve product '{ProductId}' from the read database.", id);
+            return null;
         }
     }
 
@@ -82,7 +90,8 @@ public class ProductReadRepository : IProductReadRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException("Failed to retrieve products by ids from the read database.", exception);
+            _logger.LogError(exception, "Failed to retrieve products by ids from the read database.");
+            return Array.Empty<ProductReadModel>();
         }
     }
 }

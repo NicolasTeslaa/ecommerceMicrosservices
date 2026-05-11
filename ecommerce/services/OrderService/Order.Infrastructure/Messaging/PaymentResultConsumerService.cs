@@ -13,6 +13,8 @@ namespace Order.Infrastructure.Messaging;
 
 public class PaymentResultConsumerService : BackgroundService
 {
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(10);
+
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<PaymentResultConsumerService> _logger;
@@ -31,38 +33,45 @@ public class PaymentResultConsumerService : BackgroundService
     {
         await Task.Yield();
 
-        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
-
-        if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for OrderService.");
-
-        var approvedTopic = _configuration["Kafka:PaymentApprovedTopic"] ?? "payment.approved";
-        var failedTopic = _configuration["Kafka:PaymentFailedTopic"] ?? "payment.failed";
-        var groupId = _configuration["Kafka:PaymentResultConsumerGroup"] ?? "order-payment-results";
-
-        using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
-        {
-            BootstrapServers = bootstrapServers,
-            GroupId = groupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            AllowAutoCreateTopics = true,
-            EnableAutoCommit = false
-        }).Build();
-
-        consumer.Subscribe([approvedTopic, failedTopic]);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var result = consumer.Consume(stoppingToken);
+                var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
-                if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                if (string.IsNullOrWhiteSpace(bootstrapServers))
+                {
+                    _logger.LogWarning("Order payment-result consumer is waiting because Kafka:BootstrapServers was not configured.");
+                    await Task.Delay(RetryDelay, stoppingToken);
                     continue;
+                }
 
-                using var scope = _serviceScopeFactory.CreateScope();
-                await ProcessMessageAsync(scope.ServiceProvider, result.Topic, result.Message.Value, stoppingToken);
-                consumer.Commit(result);
+                var approvedTopic = _configuration["Kafka:PaymentApprovedTopic"] ?? "payment.approved";
+                var failedTopic = _configuration["Kafka:PaymentFailedTopic"] ?? "payment.failed";
+                var groupId = _configuration["Kafka:PaymentResultConsumerGroup"] ?? "order-payment-results";
+
+                using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
+                {
+                    BootstrapServers = bootstrapServers,
+                    GroupId = groupId,
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    AllowAutoCreateTopics = true,
+                    EnableAutoCommit = false
+                }).Build();
+
+                consumer.Subscribe([approvedTopic, failedTopic]);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var result = consumer.Consume(stoppingToken);
+
+                    if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                        continue;
+
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    await ProcessMessageAsync(scope.ServiceProvider, result.Topic, result.Message.Value, stoppingToken);
+                    consumer.Commit(result);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -71,6 +80,7 @@ public class PaymentResultConsumerService : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Unexpected error while consuming payment results.");
+                await Task.Delay(RetryDelay, stoppingToken);
             }
         }
     }
@@ -89,7 +99,10 @@ public class PaymentResultConsumerService : BackgroundService
         {
             var integrationEvent = JsonSerializer.Deserialize<PaymentApprovedIntegrationEvent>(payload);
             if (integrationEvent is null)
+            {
+                _logger.LogWarning("Order payment-result consumer ignored a payment.approved message because it could not deserialize the payload.");
                 return;
+            }
 
             var order = await writeDbContext.Orders.Include(item => item.Items)
                 .FirstOrDefaultAsync(item => item.Id == integrationEvent.OrderId, cancellationToken);
@@ -108,7 +121,10 @@ public class PaymentResultConsumerService : BackgroundService
 
         var failedEvent = JsonSerializer.Deserialize<PaymentFailedIntegrationEvent>(payload);
         if (failedEvent is null)
+        {
+            _logger.LogWarning("Order payment-result consumer ignored a payment.failed message because it could not deserialize the payload.");
             return;
+        }
 
         var failedOrder = await writeDbContext.Orders.Include(item => item.Items)
             .FirstOrDefaultAsync(item => item.Id == failedEvent.OrderId, cancellationToken);

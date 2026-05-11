@@ -1,6 +1,5 @@
 using Catalog.Application.Commands;
 using Catalog.Application.Interfaces;
-using Catalog.Domain.Exceptions;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
@@ -27,20 +26,20 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Guid>
     public async Task<Guid> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty)
-            throw new InvalidProductIdException();
+            return Guid.Empty;
 
         if (request.CategoryId == Guid.Empty)
-            throw new InvalidCategoryIdException();
+            return Guid.Empty;
 
         var product = await _repository.GetByIdAsync(request.Id, cancellationToken);
 
         if (product is null)
-            throw new ProductNotFoundException(request.Id);
+            return Guid.Empty;
 
         var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
 
         if (category is null)
-            throw new CategoryNotFoundException(request.CategoryId);
+            return Guid.Empty;
 
         product.Update(
             request.Name,

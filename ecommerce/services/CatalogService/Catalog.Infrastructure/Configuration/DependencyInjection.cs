@@ -3,6 +3,7 @@ using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Catalog.Infrastructure.Configuration;
 
@@ -10,18 +11,18 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var writeConnectionString = GetRequiredConnectionString(configuration, "CatalogWriteDb");
-        var readConnectionString = GetRequiredConnectionString(configuration, "CatalogReadDb");
+        var writeConnectionString = GetConnectionStringOrFallback(configuration, "CatalogWriteDb");
+        var readConnectionString = GetConnectionStringOrFallback(configuration, "CatalogReadDb");
 
         services.AddDbContext<CatalogWriteDbContext>(options =>
             options.UseMySql(
                 writeConnectionString,
-                ServerVersion.AutoDetect(writeConnectionString)));
+                new MySqlServerVersion(new Version(8, 0, 36))));
 
         services.AddDbContext<CatalogReadDbContext>(options =>
             options.UseMySql(
                 readConnectionString,
-                ServerVersion.AutoDetect(readConnectionString)));
+                new MySqlServerVersion(new Version(8, 0, 36))));
 
         services.AddScoped<IProductWriteRepository, ProductWriteRepository>();
         services.AddScoped<IProductReadRepository, ProductReadRepository>();
@@ -34,12 +35,17 @@ public static class DependencyInjection
         return services;
     }
 
-    private static string GetRequiredConnectionString(IConfiguration configuration, string connectionStringName)
+    private static string GetConnectionStringOrFallback(IConfiguration configuration, string connectionStringName)
     {
         var connectionString = configuration.GetConnectionString(connectionStringName);
 
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException($"Connection string '{connectionStringName}' was not configured.");
+        {
+            using var loggerFactory = LoggerFactory.Create(_ => { });
+            loggerFactory.CreateLogger("Catalog.Infrastructure.Configuration.DependencyInjection")
+                .LogError("Connection string '{ConnectionStringName}' was not configured. Using a fallback connection string.", connectionStringName);
+            return $"Server=localhost;Port=3306;Database={connectionStringName.ToLowerInvariant()}_fallback;Uid=root;Pwd=root;";
+        }
 
         return connectionString;
     }

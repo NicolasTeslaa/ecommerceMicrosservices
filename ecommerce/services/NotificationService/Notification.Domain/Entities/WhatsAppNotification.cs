@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Notification.Domain.Enums;
 
 namespace Notification.Domain.Entities;
@@ -22,14 +23,7 @@ public class WhatsAppNotification
     {
     }
 
-    public WhatsAppNotification(
-        Guid orderId,
-        Guid customerId,
-        string sourceTopic,
-        string eventType,
-        string recipientPhoneNumber,
-        string message,
-        string deduplicationKey)
+    public WhatsAppNotification(Guid orderId, Guid customerId, string sourceTopic, string eventType, string recipientPhoneNumber, string message, string deduplicationKey)
     {
         Id = Guid.NewGuid();
         OrderId = orderId;
@@ -62,9 +56,9 @@ public class WhatsAppNotification
     private static string RequireValue(string value, string paramName, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"{paramName} is required.");
+            Trace.TraceError("{0} is required.", paramName);
 
-        var sanitized = value.Trim();
+        var sanitized = (value ?? string.Empty).Trim();
         return sanitized.Length > maxLength ? sanitized[..maxLength] : sanitized;
     }
 }

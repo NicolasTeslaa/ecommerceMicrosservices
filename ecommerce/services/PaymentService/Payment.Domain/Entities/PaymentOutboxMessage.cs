@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Payment.Domain.Entities;
 
 public class PaymentOutboxMessage
@@ -31,15 +33,20 @@ public class PaymentOutboxMessage
     public static PaymentOutboxMessage Create(Guid paymentId, string topic, string key, string type, string payload)
     {
         if (paymentId == Guid.Empty)
-            throw new ArgumentException("PaymentId is required.", nameof(paymentId));
+            Trace.TraceError("PaymentId is required.");
         if (string.IsNullOrWhiteSpace(topic))
-            throw new ArgumentException("Topic is required.", nameof(topic));
+            Trace.TraceError("Topic is required.");
         if (string.IsNullOrWhiteSpace(type))
-            throw new ArgumentException("Type is required.", nameof(type));
+            Trace.TraceError("Type is required.");
         if (string.IsNullOrWhiteSpace(payload))
-            throw new ArgumentException("Payload is required.", nameof(payload));
+            Trace.TraceError("Payload is required.");
 
-        return new PaymentOutboxMessage(paymentId, topic, key, type, payload);
+        return new PaymentOutboxMessage(
+            paymentId == Guid.Empty ? Guid.NewGuid() : paymentId,
+            topic?.Trim() ?? "fallback-topic",
+            key?.Trim() ?? string.Empty,
+            type?.Trim() ?? "fallback-type",
+            payload?.Trim() ?? "{}");
     }
 
     public void MarkAsPublished()
@@ -51,8 +58,6 @@ public class PaymentOutboxMessage
     public void RegisterPublishFailure(string error)
     {
         PublishAttempts++;
-        LastError = string.IsNullOrWhiteSpace(error)
-            ? "Unknown publish error."
-            : error[..Math.Min(error.Length, 4000)];
+        LastError = string.IsNullOrWhiteSpace(error) ? "Unknown publish error." : error[..Math.Min(error.Length, 4000)];
     }
 }

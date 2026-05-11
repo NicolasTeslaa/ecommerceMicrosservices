@@ -4,6 +4,7 @@ using Expedition.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Expedition.Infrastructure.Configuration;
 
@@ -11,11 +12,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("ExpeditionDb")
-            ?? throw new InvalidOperationException("Connection string 'ExpeditionDb' was not configured.");
+        var connectionString = GetConnectionStringOrFallback(configuration, "ExpeditionDb");
 
         services.AddDbContext<ExpeditionDbContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36))));
 
         services.AddScoped<IExpeditionRepository, ExpeditionRepository>();
         services.AddScoped<IExpeditionEventPublisher, KafkaExpeditionEventPublisher>();
@@ -24,5 +24,20 @@ public static class DependencyInjection
         services.AddHostedService<ExpeditionStatusAutomationService>();
 
         return services;
+    }
+
+    private static string GetConnectionStringOrFallback(IConfiguration configuration, string connectionStringName)
+    {
+        var connectionString = configuration.GetConnectionString(connectionStringName);
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            using var loggerFactory = LoggerFactory.Create(_ => { });
+            loggerFactory.CreateLogger("Expedition.Infrastructure.Configuration.DependencyInjection")
+                .LogError("Connection string '{ConnectionStringName}' was not configured. Using a fallback connection string.", connectionStringName);
+            return $"Server=localhost;Port=3306;Database={connectionStringName.ToLowerInvariant()}_fallback;Uid=root;Pwd=root;";
+        }
+
+        return connectionString;
     }
 }

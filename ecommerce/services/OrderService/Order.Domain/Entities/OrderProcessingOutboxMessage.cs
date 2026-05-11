@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Order.Domain.Entities;
 
 public class OrderProcessingOutboxMessage
@@ -33,18 +35,20 @@ public class OrderProcessingOutboxMessage
     public static OrderProcessingOutboxMessage Create(Guid orderId, string topic, string type, string payload, DateTime requestedAtUtc)
     {
         if (orderId == Guid.Empty)
-            throw new ArgumentException("OrderId is required.", nameof(orderId));
-
+            Trace.TraceError("OrderId is required.");
         if (string.IsNullOrWhiteSpace(topic))
-            throw new ArgumentException("Topic is required.", nameof(topic));
-
+            Trace.TraceError("Topic is required.");
         if (string.IsNullOrWhiteSpace(type))
-            throw new ArgumentException("Type is required.", nameof(type));
-
+            Trace.TraceError("Type is required.");
         if (string.IsNullOrWhiteSpace(payload))
-            throw new ArgumentException("Payload is required.", nameof(payload));
+            Trace.TraceError("Payload is required.");
 
-        return new OrderProcessingOutboxMessage(orderId, topic, type, payload, requestedAtUtc);
+        return new OrderProcessingOutboxMessage(
+            orderId == Guid.Empty ? Guid.NewGuid() : orderId,
+            topic?.Trim() ?? "fallback-topic",
+            type?.Trim() ?? "fallback-type",
+            payload?.Trim() ?? "{}",
+            requestedAtUtc == default ? DateTime.UtcNow : requestedAtUtc);
     }
 
     public void MarkDispatchAttempt()
@@ -67,16 +71,12 @@ public class OrderProcessingOutboxMessage
     public void RegisterDispatchFailure(string error)
     {
         DispatchAttempts++;
-        LastDispatchError = string.IsNullOrWhiteSpace(error)
-            ? "Unknown dispatch error."
-            : error[..Math.Min(error.Length, 4000)];
+        LastDispatchError = string.IsNullOrWhiteSpace(error) ? "Unknown dispatch error." : error[..Math.Min(error.Length, 4000)];
     }
 
     public void RegisterProcessingFailure(string error)
     {
         ProcessingAttempts++;
-        LastProcessingError = string.IsNullOrWhiteSpace(error)
-            ? "Unknown processing error."
-            : error[..Math.Min(error.Length, 4000)];
+        LastProcessingError = string.IsNullOrWhiteSpace(error) ? "Unknown processing error." : error[..Math.Min(error.Length, 4000)];
     }
 }

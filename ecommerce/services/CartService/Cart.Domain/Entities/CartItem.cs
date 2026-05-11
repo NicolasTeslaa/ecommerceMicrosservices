@@ -1,4 +1,4 @@
-using Cart.Domain.Exceptions;
+using System.Diagnostics;
 
 namespace Cart.Domain.Entities;
 
@@ -34,7 +34,10 @@ public class CartItem
     public void IncreaseQuantity(int quantity)
     {
         if (quantity <= 0)
-            throw new InvalidQuantityException();
+        {
+            LogSoftFailure("CartItem received a non-positive quantity increment.");
+            return;
+        }
 
         Quantity += quantity;
         UpdatedAtUtc = DateTime.UtcNow;
@@ -43,10 +46,16 @@ public class CartItem
     public void UpdateSnapshot(string productName, decimal unitPrice)
     {
         if (string.IsNullOrWhiteSpace(productName))
-            throw new InvalidProductNameException();
+        {
+            LogSoftFailure("CartItem received an empty product name.");
+            return;
+        }
 
         if (unitPrice <= 0)
-            throw new InvalidUnitPriceException();
+        {
+            LogSoftFailure("CartItem received a non-positive unit price.");
+            return;
+        }
 
         ProductName = productName.Trim();
         UnitPrice = unitPrice;
@@ -56,7 +65,10 @@ public class CartItem
     public void SetQuantity(int quantity)
     {
         if (quantity <= 0)
-            throw new InvalidQuantityException();
+        {
+            LogSoftFailure("CartItem received a non-positive quantity.");
+            return;
+        }
 
         Quantity = quantity;
         UpdatedAtUtc = DateTime.UtcNow;
@@ -65,15 +77,17 @@ public class CartItem
     private static void Validate(Guid productId, string productName, decimal unitPrice, int quantity)
     {
         if (productId == Guid.Empty)
-            throw new InvalidProductIdException();
+            LogSoftFailure("CartItem received an empty product id.");
 
         if (string.IsNullOrWhiteSpace(productName))
-            throw new InvalidProductNameException();
+            LogSoftFailure("CartItem received an empty product name.");
 
         if (unitPrice <= 0)
-            throw new InvalidUnitPriceException();
+            LogSoftFailure("CartItem received a non-positive unit price.");
 
         if (quantity <= 0)
-            throw new InvalidQuantityException();
+            LogSoftFailure("CartItem received a non-positive quantity.");
     }
+
+    private static void LogSoftFailure(string message) => Trace.TraceError(message);
 }

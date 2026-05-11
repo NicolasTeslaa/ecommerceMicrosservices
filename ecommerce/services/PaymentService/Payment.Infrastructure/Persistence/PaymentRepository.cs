@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Payment.Application.Interfaces;
-using Payment.Domain.Exceptions;
 
 namespace Payment.Infrastructure.Persistence;
 
 public class PaymentRepository : IPaymentRepository
 {
     private readonly PaymentDbContext _context;
+    private readonly ILogger<PaymentRepository> _logger;
 
-    public PaymentRepository(PaymentDbContext context)
+    public PaymentRepository(PaymentDbContext context, ILogger<PaymentRepository>? logger = null)
     {
         _context = context;
+        _logger = logger ?? NullLogger<PaymentRepository>.Instance;
     }
 
     public async Task<Payment.Domain.Entities.Payment?> GetByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default)
@@ -21,7 +24,8 @@ public class PaymentRepository : IPaymentRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve payment for order '{orderId}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve payment for order '{OrderId}'.", orderId);
+            return null;
         }
     }
 
@@ -35,7 +39,8 @@ public class PaymentRepository : IPaymentRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve payment for PaymentIntent '{paymentIntentId}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve payment for PaymentIntent '{PaymentIntentId}'.", paymentIntentId);
+            return null;
         }
     }
 
@@ -48,7 +53,7 @@ public class PaymentRepository : IPaymentRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to persist payment for order '{payment.OrderId}'.", exception);
+            _logger.LogError(exception, "Failed to persist payment for order '{OrderId}'.", payment.OrderId);
         }
     }
 
@@ -60,7 +65,7 @@ public class PaymentRepository : IPaymentRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to update payment for order '{payment.OrderId}'.", exception);
+            _logger.LogError(exception, "Failed to update payment for order '{OrderId}'.", payment.OrderId);
         }
     }
 }

@@ -1,6 +1,5 @@
 using Catalog.Application.Commands;
 using Catalog.Application.Interfaces;
-using Catalog.Domain.Exceptions;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
@@ -19,12 +18,12 @@ public class UpdateCategoryHandler : IRequestHandler<UpdateCategoryCommand, Guid
     public async Task<Guid> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty)
-            throw new InvalidCategoryIdException();
+            return Guid.Empty;
 
         var category = await _repository.GetByIdAsync(request.Id, cancellationToken);
 
         if (category is null)
-            throw new CategoryNotFoundException(request.Id);
+            return Guid.Empty;
 
         category.Update(request.Name);
 

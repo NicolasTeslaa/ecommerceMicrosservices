@@ -1,7 +1,6 @@
 using Customer.Application.DTOs;
 using Customer.Application.Interfaces;
 using Customer.Application.Queries;
-using Customer.Domain.Exceptions;
 using MediatR;
 
 namespace Customer.Application.Handlers;
@@ -17,8 +16,10 @@ public class GetCustomerAddressByIdHandler : IRequestHandler<GetCustomerAddressB
 
     public async Task<CustomerAddressDto> Handle(GetCustomerAddressByIdQuery request, CancellationToken cancellationToken)
     {
-        var customer = await _repository.GetByIdAsync(request.CustomerId, cancellationToken)
-            ?? throw new CustomerNotFoundException(request.CustomerId);
+        var customer = await _repository.GetByIdAsync(request.CustomerId, cancellationToken);
+
+        if (customer is null)
+            return new CustomerAddressDto { CustomerId = request.CustomerId, Id = request.AddressId };
 
         return CustomerAddressDto.MapFromEntity(customer.GetAddress(request.AddressId));
     }

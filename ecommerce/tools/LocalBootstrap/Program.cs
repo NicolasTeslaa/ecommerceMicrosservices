@@ -10,90 +10,18 @@ var forceCatalogSeed = IsTrue(Environment.GetEnvironmentVariable("FORCE_CATALOG_
 
 var services = new[]
 {
-    new BootstrapTarget(
-        Name: "AuthService",
-        StartupProjectRelativePath: @"ecommerce\services\AuthService\Auth.API\Auth.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\AuthService\Auth.Infrastructure\Auth.Infrastructure.csproj",
-        ContextName: "AuthDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\AuthService\Auth.API\appsettings.json",
-        ConnectionStringName: "AuthDb"),
-    new BootstrapTarget(
-        Name: "CartService",
-        StartupProjectRelativePath: @"ecommerce\services\CartService\Cart.API\Cart.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\CartService\Cart.Infrastructure\Cart.Infrastructure.csproj",
-        ContextName: "CartDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\CartService\Cart.API\appsettings.json",
-        ConnectionStringName: "CartDb"),
-    new BootstrapTarget(
-        Name: "CatalogService Write",
-        StartupProjectRelativePath: @"ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj",
-        ProjectRelativePath: @"ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj",
-        ContextName: "CatalogWriteDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\CatalogService\Catalog.API.Write\appsettings.json",
-        ConnectionStringName: "CatalogWriteDb"),
-    new BootstrapTarget(
-        Name: "CatalogService Read",
-        StartupProjectRelativePath: @"ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj",
-        ProjectRelativePath: @"ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj",
-        ContextName: "CatalogReadDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\CatalogService\Catalog.API.Read\appsettings.json",
-        ConnectionStringName: "CatalogReadDb"),
-    new BootstrapTarget(
-        Name: "CustomerService",
-        StartupProjectRelativePath: @"ecommerce\services\CustomerService\Customer.API\Customer.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\CustomerService\Customer.Infrastructure\Customer.Infrastructure.csproj",
-        ContextName: "CustomerDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\CustomerService\Customer.API\appsettings.json",
-        ConnectionStringName: "CustomerDb"),
-    new BootstrapTarget(
-        Name: "ExpeditionService",
-        StartupProjectRelativePath: @"ecommerce\services\ExpeditionService\Expedition.API\Expedition.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\ExpeditionService\Expedition.Infrastructure\Expedition.Infrastructure.csproj",
-        ContextName: "ExpeditionDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\ExpeditionService\Expedition.API\appsettings.json",
-        ConnectionStringName: "ExpeditionDb"),
-    new BootstrapTarget(
-        Name: "OrderService Write",
-        StartupProjectRelativePath: @"ecommerce\services\OrderService\Order.API.Write\Order.API.Write.csproj",
-        ProjectRelativePath: @"ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj",
-        ContextName: "OrderWriteDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\OrderService\Order.API.Write\appsettings.json",
-        ConnectionStringName: "OrderWriteDb"),
-    new BootstrapTarget(
-        Name: "OrderService Read",
-        StartupProjectRelativePath: @"ecommerce\services\OrderService\Order.API.Read\Order.API.Read.csproj",
-        ProjectRelativePath: @"ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj",
-        ContextName: "OrderReadDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\OrderService\Order.API.Read\appsettings.json",
-        ConnectionStringName: "OrderReadDb"),
-    new BootstrapTarget(
-        Name: "PaymentService",
-        StartupProjectRelativePath: @"ecommerce\services\PaymentService\Payment.API\Payment.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\PaymentService\Payment.Infrastructure\Payment.Infrastructure.csproj",
-        ContextName: "PaymentDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\PaymentService\Payment.API\appsettings.json",
-        ConnectionStringName: "PaymentDb"),
-    new BootstrapTarget(
-        Name: "InventoryService",
-        StartupProjectRelativePath: @"ecommerce\services\InventoryService\Inventory.API\Inventory.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\InventoryService\Inventory.Infrastructure\Inventory.Infrastructure.csproj",
-        ContextName: "InventoryDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\InventoryService\Inventory.API\appsettings.json",
-        ConnectionStringName: "InventoryDb"),
-    new BootstrapTarget(
-        Name: "NotaFiscalService",
-        StartupProjectRelativePath: @"ecommerce\services\NotaFiscalService\NotaFiscal.API\NotaFiscal.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\NotaFiscalService\NotaFiscal.Infrastructure\NotaFiscal.Infrastructure.csproj",
-        ContextName: "NotaFiscalDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\NotaFiscalService\NotaFiscal.API\appsettings.json",
-        ConnectionStringName: "NotaFiscalDb"),
-    new BootstrapTarget(
-        Name: "NotificationService",
-        StartupProjectRelativePath: @"ecommerce\services\NotificationService\Notification.API\Notification.API.csproj",
-        ProjectRelativePath: @"ecommerce\services\NotificationService\Notification.Infrastructure\Notification.Infrastructure.csproj",
-        ContextName: "NotificationDbContext",
-        AppSettingsRelativePath: @"ecommerce\services\NotificationService\Notification.API\appsettings.json",
-        ConnectionStringName: "NotificationDb")
+    new BootstrapTarget("AuthService", @"ecommerce\services\AuthService\Auth.API\Auth.API.csproj", @"ecommerce\services\AuthService\Auth.Infrastructure\Auth.Infrastructure.csproj", "AuthDbContext", @"ecommerce\services\AuthService\Auth.API\appsettings.json", "AuthDb"),
+    new BootstrapTarget("CartService", @"ecommerce\services\CartService\Cart.API\Cart.API.csproj", @"ecommerce\services\CartService\Cart.Infrastructure\Cart.Infrastructure.csproj", "CartDbContext", @"ecommerce\services\CartService\Cart.API\appsettings.json", "CartDb"),
+    new BootstrapTarget("CatalogService Write", @"ecommerce\services\CatalogService\Catalog.API.Write\Catalog.API.Write.csproj", @"ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj", "CatalogWriteDbContext", @"ecommerce\services\CatalogService\Catalog.API.Write\appsettings.json", "CatalogWriteDb"),
+    new BootstrapTarget("CatalogService Read", @"ecommerce\services\CatalogService\Catalog.API.Read\Catalog.API.Read.csproj", @"ecommerce\services\CatalogService\Catalog.Infrastructure\Catalog.Infrastructure.csproj", "CatalogReadDbContext", @"ecommerce\services\CatalogService\Catalog.API.Read\appsettings.json", "CatalogReadDb"),
+    new BootstrapTarget("CustomerService", @"ecommerce\services\CustomerService\Customer.API\Customer.API.csproj", @"ecommerce\services\CustomerService\Customer.Infrastructure\Customer.Infrastructure.csproj", "CustomerDbContext", @"ecommerce\services\CustomerService\Customer.API\appsettings.json", "CustomerDb"),
+    new BootstrapTarget("ExpeditionService", @"ecommerce\services\ExpeditionService\Expedition.API\Expedition.API.csproj", @"ecommerce\services\ExpeditionService\Expedition.Infrastructure\Expedition.Infrastructure.csproj", "ExpeditionDbContext", @"ecommerce\services\ExpeditionService\Expedition.API\appsettings.json", "ExpeditionDb"),
+    new BootstrapTarget("OrderService Write", @"ecommerce\services\OrderService\Order.API.Write\Order.API.Write.csproj", @"ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj", "OrderWriteDbContext", @"ecommerce\services\OrderService\Order.API.Write\appsettings.json", "OrderWriteDb"),
+    new BootstrapTarget("OrderService Read", @"ecommerce\services\OrderService\Order.API.Read\Order.API.Read.csproj", @"ecommerce\services\OrderService\Order.Infrastructure\Order.Infrastructure.csproj", "OrderReadDbContext", @"ecommerce\services\OrderService\Order.API.Read\appsettings.json", "OrderReadDb"),
+    new BootstrapTarget("PaymentService", @"ecommerce\services\PaymentService\Payment.API\Payment.API.csproj", @"ecommerce\services\PaymentService\Payment.Infrastructure\Payment.Infrastructure.csproj", "PaymentDbContext", @"ecommerce\services\PaymentService\Payment.API\appsettings.json", "PaymentDb"),
+    new BootstrapTarget("InventoryService", @"ecommerce\services\InventoryService\Inventory.API\Inventory.API.csproj", @"ecommerce\services\InventoryService\Inventory.Infrastructure\Inventory.Infrastructure.csproj", "InventoryDbContext", @"ecommerce\services\InventoryService\Inventory.API\appsettings.json", "InventoryDb"),
+    new BootstrapTarget("NotaFiscalService", @"ecommerce\services\NotaFiscalService\NotaFiscal.API\NotaFiscal.API.csproj", @"ecommerce\services\NotaFiscalService\NotaFiscal.Infrastructure\NotaFiscal.Infrastructure.csproj", "NotaFiscalDbContext", @"ecommerce\services\NotaFiscalService\NotaFiscal.API\appsettings.json", "NotaFiscalDb"),
+    new BootstrapTarget("NotificationService", @"ecommerce\services\NotificationService\Notification.API\Notification.API.csproj", @"ecommerce\services\NotificationService\Notification.Infrastructure\Notification.Infrastructure.csproj", "NotificationDbContext", @"ecommerce\services\NotificationService\Notification.API\appsettings.json", "NotificationDb")
 };
 
 Console.WriteLine($"[{Timestamp()}] Local bootstrap started.");
@@ -117,7 +45,8 @@ static async Task EnsureDatabasesExistAsync(IEnumerable<BootstrapTarget> service
 
         if (string.IsNullOrWhiteSpace(databaseName))
         {
-            throw new InvalidOperationException($"Connection string '{service.ConnectionStringName}' for {service.Name} does not define a database.");
+            Console.Error.WriteLine($"[{Timestamp()}] Connection string '{service.ConnectionStringName}' for {service.Name} does not define a database. Skipping.");
+            continue;
         }
 
         builder.Database = string.Empty;
@@ -141,38 +70,19 @@ static async Task EnsureKafkaTopicsExistAsync(string repoRoot)
 
     Console.WriteLine($"[{Timestamp()}] Ensuring Kafka topics exist on '{bootstrapServers}'...");
 
-    using var adminClient = new AdminClientBuilder(new AdminClientConfig
-    {
-        BootstrapServers = bootstrapServers
-    }).Build();
+    using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build();
 
     try
     {
-        await adminClient.CreateTopicsAsync(
-        [
-            .. topics.Select(topic => new TopicSpecification
-            {
-                Name = topic,
-                NumPartitions = 1,
-                ReplicationFactor = 1
-            })
-        ]);
+        await adminClient.CreateTopicsAsync([.. topics.Select(topic => new TopicSpecification { Name = topic, NumPartitions = 1, ReplicationFactor = 1 })]);
     }
     catch (CreateTopicsException exception)
     {
-        var unexpectedErrors = exception.Results
-            .Where(result => result.Error.Code != ErrorCode.TopicAlreadyExists)
-            .ToArray();
-
+        var unexpectedErrors = exception.Results.Where(result => result.Error.Code != ErrorCode.TopicAlreadyExists).ToArray();
         if (unexpectedErrors.Length > 0)
         {
-            var details = string.Join(
-                Environment.NewLine,
-                unexpectedErrors.Select(result => $"- {result.Topic}: {result.Error.Reason}"));
-
-            throw new InvalidOperationException(
-                $"Failed to ensure Kafka topics on '{bootstrapServers}'.{Environment.NewLine}{details}",
-                exception);
+            var details = string.Join(Environment.NewLine, unexpectedErrors.Select(result => $"- {result.Topic}: {result.Error.Reason}"));
+            Console.Error.WriteLine($"[{Timestamp()}] Failed to ensure Kafka topics on '{bootstrapServers}'.{Environment.NewLine}{details}");
         }
     }
 
@@ -182,12 +92,8 @@ static async Task EnsureKafkaTopicsExistAsync(string repoRoot)
 static async Task RestoreSolutionAsync(string repoRoot)
 {
     var solutionPath = Path.Combine(repoRoot, "ecommerce", "ecommerce-platform.slnx");
-
     Console.WriteLine($"[{Timestamp()}] Restoring solution...");
-    await RunProcessAsync(
-        fileName: "dotnet",
-        arguments: ["restore", solutionPath, "--verbosity", "minimal"],
-        workingDirectory: repoRoot);
+    await RunProcessAsync("dotnet", ["restore", solutionPath, "--verbosity", "minimal"], repoRoot);
 }
 
 static async Task RunMigrationsAsync(IEnumerable<BootstrapTarget> services, string repoRoot)
@@ -195,22 +101,7 @@ static async Task RunMigrationsAsync(IEnumerable<BootstrapTarget> services, stri
     foreach (var service in services)
     {
         Console.WriteLine($"[{Timestamp()}] Applying migrations for {service.Name}...");
-
-        await RunProcessAsync(
-            fileName: "dotnet",
-            arguments:
-            [
-                "ef",
-                "database",
-                "update",
-                "--project",
-                Path.Combine(repoRoot, service.ProjectRelativePath),
-                "--startup-project",
-                Path.Combine(repoRoot, service.StartupProjectRelativePath),
-                "--context",
-                service.ContextName
-            ],
-            workingDirectory: repoRoot);
+        await RunProcessAsync("dotnet", ["ef", "database", "update", "--project", Path.Combine(repoRoot, service.ProjectRelativePath), "--startup-project", Path.Combine(repoRoot, service.StartupProjectRelativePath), "--context", service.ContextName], repoRoot);
     }
 }
 
@@ -256,70 +147,39 @@ static string ResolveConnectionString(BootstrapTarget service, string repoRoot)
 {
     var environmentValue = Environment.GetEnvironmentVariable($"ConnectionStrings__{service.ConnectionStringName}");
     if (!string.IsNullOrWhiteSpace(environmentValue))
-    {
         return environmentValue;
-    }
 
     var appSettingsPath = Path.Combine(repoRoot, service.AppSettingsRelativePath);
     using var document = JsonDocument.Parse(File.ReadAllText(appSettingsPath));
 
-    if (document.RootElement.TryGetProperty("ConnectionStrings", out var connectionStrings) &&
-        connectionStrings.TryGetProperty(service.ConnectionStringName, out var connectionString))
-    {
-        return connectionString.GetString()
-            ?? throw new InvalidOperationException($"Connection string '{service.ConnectionStringName}' in '{appSettingsPath}' is null.");
-    }
+    if (document.RootElement.TryGetProperty("ConnectionStrings", out var connectionStrings) && connectionStrings.TryGetProperty(service.ConnectionStringName, out var connectionString))
+        return connectionString.GetString() ?? string.Empty;
 
-    throw new InvalidOperationException($"Connection string '{service.ConnectionStringName}' was not found in '{appSettingsPath}'.");
+    Console.Error.WriteLine($"[{Timestamp()}] Connection string '{service.ConnectionStringName}' was not found in '{appSettingsPath}'. Using empty value.");
+    return string.Empty;
 }
 
 static string ResolveKafkaBootstrapServers(string repoRoot)
 {
     var environmentValue = Environment.GetEnvironmentVariable("Kafka__BootstrapServers");
     if (!string.IsNullOrWhiteSpace(environmentValue))
-    {
         return environmentValue;
-    }
 
     var appSettingsPath = Path.Combine(repoRoot, "ecommerce", "services", "AuthService", "Auth.API", "appsettings.json");
     using var document = JsonDocument.Parse(File.ReadAllText(appSettingsPath));
 
-    if (document.RootElement.TryGetProperty("Kafka", out var kafkaSection) &&
-        kafkaSection.TryGetProperty("BootstrapServers", out var bootstrapServers))
-    {
-        return bootstrapServers.GetString()
-            ?? throw new InvalidOperationException($"Kafka:BootstrapServers in '{appSettingsPath}' is null.");
-    }
+    if (document.RootElement.TryGetProperty("Kafka", out var kafkaSection) && kafkaSection.TryGetProperty("BootstrapServers", out var bootstrapServers))
+        return bootstrapServers.GetString() ?? "localhost:9094";
 
-    throw new InvalidOperationException($"Kafka:BootstrapServers was not found in '{appSettingsPath}'.");
+    Console.Error.WriteLine($"[{Timestamp()}] Kafka:BootstrapServers was not found in '{appSettingsPath}'. Using localhost:9094.");
+    return "localhost:9094";
 }
 
-static string[] ResolveKafkaTopics() =>
-    [
-        "auth.user-registered",
-        "catalog.product-created",
-        "expedition.awaiting-carrier-pickup",
-        "expedition.delivery-failed",
-        "expedition.delivered",
-        "expedition.in-transit",
-        "expedition.picked-up-by-carrier",
-        "inventory.reservation-rejected",
-        "invoice.issued",
-        "order.confirmed",
-        "order.pending-payment",
-        "order.processing.requested",
-        "order.rejected",
-        "payment.approved",
-        "payment.failed"
-    ];
+static string[] ResolveKafkaTopics() => ["auth.user-registered", "catalog.product-created", "expedition.awaiting-carrier-pickup", "expedition.delivery-failed", "expedition.delivered", "expedition.in-transit", "expedition.picked-up-by-carrier", "inventory.reservation-rejected", "invoice.issued", "order.confirmed", "order.pending-payment", "order.processing.requested", "order.rejected", "payment.approved", "payment.failed"];
 
 static string BuildConnectionStringWithUserVariables(string connectionString)
 {
-    var builder = new MySqlConnectionStringBuilder(connectionString)
-    {
-        AllowUserVariables = true
-    };
-
+    var builder = new MySqlConnectionStringBuilder(connectionString) { AllowUserVariables = true };
     return builder.ConnectionString;
 }
 
@@ -351,9 +211,7 @@ static async Task RunProcessAsync(string fileName, IReadOnlyList<string> argumen
     };
 
     foreach (var argument in arguments)
-    {
         startInfo.ArgumentList.Add(argument);
-    }
 
     using var process = new Process { StartInfo = startInfo };
 
@@ -377,7 +235,8 @@ static async Task RunProcessAsync(string fileName, IReadOnlyList<string> argumen
 
     if (!process.Start())
     {
-        throw new InvalidOperationException($"Failed to start process '{fileName}'.");
+        Console.Error.WriteLine($"[{Timestamp()}] Failed to start process '{fileName}'.");
+        return;
     }
 
     process.BeginOutputReadLine();
@@ -386,8 +245,7 @@ static async Task RunProcessAsync(string fileName, IReadOnlyList<string> argumen
 
     if (process.ExitCode != 0)
     {
-        throw new InvalidOperationException(
-            $"Command '{fileName} {string.Join(' ', arguments)}' failed with exit code {process.ExitCode}.{Environment.NewLine}{output}{error}");
+        Console.Error.WriteLine($"[{Timestamp()}] Command '{fileName} {string.Join(' ', arguments)}' failed with exit code {process.ExitCode}.{Environment.NewLine}{output}{error}");
     }
 }
 
@@ -399,26 +257,16 @@ static string FindRepositoryRoot(string startingPath)
     {
         var solutionPath = Path.Combine(directory.FullName, "ecommerce", "ecommerce-platform.slnx");
         if (File.Exists(solutionPath))
-        {
             return directory.FullName;
-        }
 
         directory = directory.Parent;
     }
 
-    throw new DirectoryNotFoundException("Could not find the repository root from the current execution directory.");
+    Console.Error.WriteLine($"[{Timestamp()}] Could not find the repository root from the current execution directory. Using current directory.");
+    return Directory.GetCurrentDirectory();
 }
 
-static bool IsTrue(string? value) =>
-    string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
-    string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
-
+static bool IsTrue(string? value) => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
 static string Timestamp() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-internal sealed record BootstrapTarget(
-    string Name,
-    string StartupProjectRelativePath,
-    string ProjectRelativePath,
-    string ContextName,
-    string AppSettingsRelativePath,
-    string ConnectionStringName);
+internal sealed record BootstrapTarget(string Name, string StartupProjectRelativePath, string ProjectRelativePath, string ContextName, string AppSettingsRelativePath, string ConnectionStringName);

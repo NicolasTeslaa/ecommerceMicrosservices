@@ -14,6 +14,8 @@ namespace Customer.Infrastructure.Messaging;
 
 public class UserRegisteredConsumerService : BackgroundService
 {
+    private static readonly TimeSpan StartupRetryDelay = TimeSpan.FromSeconds(10);
+
     private readonly IConfiguration _configuration;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<UserRegisteredConsumerService> _logger;
@@ -32,100 +34,108 @@ public class UserRegisteredConsumerService : BackgroundService
     {
         await Task.Yield();
 
-        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
-
-        if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for CustomerService.");
-
-        var consumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = bootstrapServers,
-            GroupId = _configuration["Kafka:GroupId"] ?? "customer-service",
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            AllowAutoCreateTopics = true,
-            EnableAutoCommit = false
-        };
-
-        var topic = _configuration["Kafka:UserRegisteredTopic"] ?? "auth.user-registered";
-        var consumerGroup = consumerConfig.GroupId;
-
-        using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
-        consumer.Subscribe(topic);
-        _logger.LogInformation(
-            "CustomerService Kafka consumer subscribed to topic '{Topic}' on '{BootstrapServers}'.",
-            topic,
-            bootstrapServers);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var result = consumer.Consume(stoppingToken);
+                var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
-                if (string.IsNullOrWhiteSpace(result.Message.Value))
-                    continue;
-
-                var integrationEvent = JsonSerializer.Deserialize<UserRegisteredIntegrationEvent>(result.Message.Value);
-
-                if (integrationEvent is null)
-                    continue;
-
-                using var scope = _serviceProvider.CreateScope();
-                var repository = scope.ServiceProvider.GetRequiredService<ICustomerRepository>();
-                var dbContext = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
-
-                var alreadyProcessed = await dbContext.ProcessedKafkaMessages.AnyAsync(
-                    message => message.Topic == result.Topic
-                        && message.Partition == result.Partition.Value
-                        && message.Offset == result.Offset.Value,
-                    stoppingToken);
-
-                if (alreadyProcessed)
+                if (string.IsNullOrWhiteSpace(bootstrapServers))
                 {
+                    _logger.LogWarning(
+                        "Customer user-registered consumer is waiting because Kafka:BootstrapServers was not configured.");
+                    await Task.Delay(StartupRetryDelay, stoppingToken);
+                    continue;
+                }
+
+                var consumerConfig = new ConsumerConfig
+                {
+                    BootstrapServers = bootstrapServers,
+                    GroupId = _configuration["Kafka:GroupId"] ?? "customer-service",
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    AllowAutoCreateTopics = true,
+                    EnableAutoCommit = false
+                };
+
+                var topic = _configuration["Kafka:UserRegisteredTopic"] ?? "auth.user-registered";
+                var consumerGroup = consumerConfig.GroupId;
+
+                using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+                consumer.Subscribe(topic);
+                _logger.LogInformation(
+                    "CustomerService Kafka consumer subscribed to topic '{Topic}' on '{BootstrapServers}'.",
+                    topic,
+                    bootstrapServers);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var result = consumer.Consume(stoppingToken);
+
+                    if (string.IsNullOrWhiteSpace(result.Message.Value))
+                        continue;
+
+                    var integrationEvent = JsonSerializer.Deserialize<UserRegisteredIntegrationEvent>(result.Message.Value);
+
+                    if (integrationEvent is null)
+                        continue;
+
+                    using var scope = _serviceProvider.CreateScope();
+                    var repository = scope.ServiceProvider.GetRequiredService<ICustomerRepository>();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+
+                    var alreadyProcessed = await dbContext.ProcessedKafkaMessages.AnyAsync(
+                        message => message.Topic == result.Topic
+                            && message.Partition == result.Partition.Value
+                            && message.Offset == result.Offset.Value,
+                        stoppingToken);
+
+                    if (alreadyProcessed)
+                    {
+                        consumer.Commit(result);
+                        continue;
+                    }
+
+                    await using var transaction = await dbContext.Database.BeginTransactionAsync(stoppingToken);
+
+                    var existingCustomer = await repository.GetByIdAsync(integrationEvent.CustomerId, stoppingToken);
+
+                    if (existingCustomer is null)
+                    {
+                        var customer = new Customer.Domain.Entities.Customer(
+                            integrationEvent.CustomerId,
+                            integrationEvent.AuthUserId,
+                            integrationEvent.FullName,
+                            integrationEvent.Email,
+                            integrationEvent.PhoneNumber,
+                            integrationEvent.RegisteredAtUtc);
+
+                        await repository.AddAsync(customer, stoppingToken);
+                        _logger.LogInformation(
+                            "Customer '{CustomerId}' created from auth registration event for '{Email}'.",
+                            customer.Id,
+                            customer.Email);
+                    }
+
+                    await dbContext.ProcessedKafkaMessages.AddAsync(
+                        new ProcessedKafkaMessage(
+                            result.Topic,
+                            result.Partition.Value,
+                            result.Offset.Value,
+                            consumerGroup,
+                            result.Message.Key ?? string.Empty,
+                            nameof(UserRegisteredIntegrationEvent)),
+                        stoppingToken);
+
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    await transaction.CommitAsync(stoppingToken);
                     consumer.Commit(result);
-                    continue;
-                }
 
-                await using var transaction = await dbContext.Database.BeginTransactionAsync(stoppingToken);
-
-                var existingCustomer = await repository.GetByIdAsync(integrationEvent.CustomerId, stoppingToken);
-
-                if (existingCustomer is null)
-                {
-                    var customer = new Customer.Domain.Entities.Customer(
-                        integrationEvent.CustomerId,
-                        integrationEvent.AuthUserId,
-                        integrationEvent.FullName,
-                        integrationEvent.Email,
-                        integrationEvent.PhoneNumber,
-                        integrationEvent.RegisteredAtUtc);
-
-                    await repository.AddAsync(customer, stoppingToken);
                     _logger.LogInformation(
-                        "Customer '{CustomerId}' created from auth registration event for '{Email}'.",
-                        customer.Id,
-                        customer.Email);
-                }
-
-                await dbContext.ProcessedKafkaMessages.AddAsync(
-                    new ProcessedKafkaMessage(
+                        "Kafka message '{Topic}/{Partition}/{Offset}' processed successfully by CustomerService.",
                         result.Topic,
                         result.Partition.Value,
-                        result.Offset.Value,
-                        consumerGroup,
-                        result.Message.Key ?? string.Empty,
-                        nameof(UserRegisteredIntegrationEvent)),
-                    stoppingToken);
-
-                await dbContext.SaveChangesAsync(stoppingToken);
-                await transaction.CommitAsync(stoppingToken);
-                consumer.Commit(result);
-
-                _logger.LogInformation(
-                    "Kafka message '{Topic}/{Partition}/{Offset}' processed successfully by CustomerService.",
-                    result.Topic,
-                    result.Partition.Value,
-                    result.Offset.Value);
+                        result.Offset.Value);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -134,10 +144,12 @@ public class UserRegisteredConsumerService : BackgroundService
             catch (ConsumeException exception)
             {
                 _logger.LogError(exception, "Kafka consume error in CustomerService consumer.");
+                await Task.Delay(StartupRetryDelay, stoppingToken);
             }
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Error consuming user registered event.");
+                await Task.Delay(StartupRetryDelay, stoppingToken);
             }
         }
     }

@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Order.Application.Interfaces;
-using Order.Domain.Exceptions;
 
 namespace Order.Infrastructure.Persistence;
 
 public class OrderWriteRepository : IOrderWriteRepository
 {
     private readonly OrderWriteDbContext _dbContext;
+    private readonly ILogger<OrderWriteRepository> _logger;
 
-    public OrderWriteRepository(OrderWriteDbContext dbContext)
+    public OrderWriteRepository(OrderWriteDbContext dbContext, ILogger<OrderWriteRepository>? logger = null)
     {
         _dbContext = dbContext;
+        _logger = logger ?? NullLogger<OrderWriteRepository>.Instance;
     }
 
     public async Task AddAsync(Order.Domain.Entities.Order order, CancellationToken cancellationToken = default)
@@ -22,7 +25,7 @@ public class OrderWriteRepository : IOrderWriteRepository
         }
         catch (DbUpdateException exception)
         {
-            throw new PersistenceException($"Failed to persist order '{order.Id}'. {exception.Message}");
+            _logger.LogError(exception, "Failed to persist order '{OrderId}'.", order.Id);
         }
     }
 }

@@ -15,6 +15,8 @@ namespace Payment.Infrastructure.Messaging;
 
 public class OrderPendingPaymentConsumerService : BackgroundService
 {
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(10);
+
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OrderPendingPaymentConsumerService> _logger;
@@ -33,37 +35,44 @@ public class OrderPendingPaymentConsumerService : BackgroundService
     {
         await Task.Yield();
 
-        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
-
-        if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for PaymentService.");
-
-        var topic = _configuration["Kafka:OrderPendingPaymentTopic"] ?? "order.pending-payment";
-        var groupId = _configuration["Kafka:OrderPendingPaymentConsumerGroup"] ?? "payment-service";
-
-        using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
-        {
-            BootstrapServers = bootstrapServers,
-            GroupId = groupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            AllowAutoCreateTopics = true,
-            EnableAutoCommit = false
-        }).Build();
-
-        consumer.Subscribe(topic);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var result = consumer.Consume(stoppingToken);
+                var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
-                if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                if (string.IsNullOrWhiteSpace(bootstrapServers))
+                {
+                    _logger.LogWarning("Payment pending-order consumer is waiting because Kafka:BootstrapServers was not configured.");
+                    await Task.Delay(RetryDelay, stoppingToken);
                     continue;
+                }
 
-                using var scope = _serviceScopeFactory.CreateScope();
-                await ProcessMessageAsync(scope.ServiceProvider, result, groupId, stoppingToken);
-                consumer.Commit(result);
+                var topic = _configuration["Kafka:OrderPendingPaymentTopic"] ?? "order.pending-payment";
+                var groupId = _configuration["Kafka:OrderPendingPaymentConsumerGroup"] ?? "payment-service";
+
+                using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
+                {
+                    BootstrapServers = bootstrapServers,
+                    GroupId = groupId,
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    AllowAutoCreateTopics = true,
+                    EnableAutoCommit = false
+                }).Build();
+
+                consumer.Subscribe(topic);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var result = consumer.Consume(stoppingToken);
+
+                    if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                        continue;
+
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    await ProcessMessageAsync(scope.ServiceProvider, result, groupId, stoppingToken);
+                    consumer.Commit(result);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -72,6 +81,7 @@ public class OrderPendingPaymentConsumerService : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Unexpected error while consuming order.pending-payment.");
+                await Task.Delay(RetryDelay, stoppingToken);
             }
         }
     }
@@ -155,7 +165,7 @@ public class OrderPendingPaymentConsumerService : BackgroundService
                     exception,
                     "Failed to create Stripe PaymentIntent for order '{OrderId}'. The Kafka message will be retried.",
                     integrationEvent.OrderId);
-                throw;
+                return;
             }
         }
 

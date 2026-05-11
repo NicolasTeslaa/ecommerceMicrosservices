@@ -1,6 +1,5 @@
 using Catalog.Application.Commands;
 using Catalog.Application.Interfaces;
-using Catalog.Domain.Exceptions;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
@@ -24,12 +23,12 @@ public class DeactivateProductHandler : IRequestHandler<DeactivateProductCommand
     public async Task<Guid> Handle(DeactivateProductCommand request, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty)
-            throw new InvalidProductIdException();
+            return Guid.Empty;
 
         var product = await _repository.GetByIdAsync(request.Id, cancellationToken);
 
         if (product is null)
-            throw new ProductNotFoundException(request.Id);
+            return Guid.Empty;
 
         product.Deactivate();
 

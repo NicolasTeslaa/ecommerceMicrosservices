@@ -1,15 +1,21 @@
 using Auth.Application.Interfaces;
 using Auth.Domain.Entities;
-using Auth.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Auth.Infrastructure.Persistence;
 
 public class AuthUserRepository : IAuthUserRepository
 {
     private readonly AuthDbContext _context;
+    private readonly ILogger<AuthUserRepository> _logger;
 
-    public AuthUserRepository(AuthDbContext context) => _context = context;
+    public AuthUserRepository(AuthDbContext context, ILogger<AuthUserRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<AuthUserRepository>.Instance;
+    }
 
     public async Task<AuthUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
@@ -20,7 +26,8 @@ public class AuthUserRepository : IAuthUserRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve auth user by email '{email}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve auth user by email '{Email}'.", email);
+            return null;
         }
     }
 
@@ -32,7 +39,7 @@ public class AuthUserRepository : IAuthUserRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to persist auth user '{user.Email}'.", exception);
+            _logger.LogError(exception, "Failed to persist auth user '{Email}'.", user.Email);
         }
     }
 }

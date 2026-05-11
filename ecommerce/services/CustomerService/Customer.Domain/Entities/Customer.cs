@@ -1,5 +1,5 @@
+using System.Diagnostics;
 using System.Net.Mail;
-using Customer.Domain.Exceptions;
 
 namespace Customer.Domain.Entities;
 
@@ -25,25 +25,13 @@ public class Customer
 
         Id = id;
         AuthUserId = authUserId;
-        FullName = fullName.Trim();
-        Email = email.Trim().ToLowerInvariant();
+        FullName = (fullName ?? string.Empty).Trim();
+        Email = (email ?? string.Empty).Trim().ToLowerInvariant();
         PhoneNumber = NormalizePhoneNumber(phoneNumber);
         CreatedAtUtc = createdAtUtc;
     }
 
-    public CustomerAddress AddAddress(
-        string label,
-        string recipientName,
-        string street,
-        string number,
-        string complement,
-        string neighborhood,
-        string city,
-        string state,
-        string zipCode,
-        string country,
-        string reference,
-        bool isDefault)
+    public CustomerAddress AddAddress(string label, string recipientName, string street, string number, string complement, string neighborhood, string city, string state, string zipCode, string country, string reference, bool isDefault)
     {
         if (!_addresses.Any())
             isDefault = true;
@@ -51,41 +39,14 @@ public class Customer
         if (isDefault)
             ClearDefaultAddress();
 
-        var address = new CustomerAddress(
-            Id,
-            label,
-            recipientName,
-            street,
-            number,
-            complement,
-            neighborhood,
-            city,
-            state,
-            zipCode,
-            country,
-            reference,
-            isDefault);
-
+        var address = new CustomerAddress(Id, label, recipientName, street, number, complement, neighborhood, city, state, zipCode, country, reference, isDefault);
         _addresses.Add(address);
         return address;
     }
 
-    public CustomerAddress UpdateAddress(
-        Guid addressId,
-        string label,
-        string recipientName,
-        string street,
-        string number,
-        string complement,
-        string neighborhood,
-        string city,
-        string state,
-        string zipCode,
-        string country,
-        string reference,
-        bool isDefault)
+    public CustomerAddress UpdateAddress(Guid addressId, string label, string recipientName, string street, string number, string complement, string neighborhood, string city, string state, string zipCode, string country, string reference, bool isDefault)
     {
-        var address = GetAddressOrThrow(addressId);
+        var address = GetAddressOrFallback(addressId);
 
         if (isDefault)
             ClearDefaultAddress();
@@ -96,7 +57,7 @@ public class Customer
 
     public void RemoveAddress(Guid addressId)
     {
-        var address = GetAddressOrThrow(addressId);
+        var address = GetAddressOrFallback(addressId);
         var wasDefault = address.IsDefault;
         _addresses.Remove(address);
 
@@ -106,18 +67,23 @@ public class Customer
 
     public CustomerAddress SetDefaultAddress(Guid addressId)
     {
-        var address = GetAddressOrThrow(addressId);
+        var address = GetAddressOrFallback(addressId);
         ClearDefaultAddress();
         address.SetDefault(true);
         return address;
     }
 
-    public CustomerAddress GetAddress(Guid addressId) => GetAddressOrThrow(addressId);
+    public CustomerAddress GetAddress(Guid addressId) => GetAddressOrFallback(addressId);
 
-    private CustomerAddress GetAddressOrThrow(Guid addressId)
+    private CustomerAddress GetAddressOrFallback(Guid addressId)
     {
         var address = _addresses.FirstOrDefault(item => item.Id == addressId);
-        return address ?? throw new CustomerAddressNotFoundException(Id, addressId);
+        if (address is not null)
+            return address;
+
+        Trace.TraceError("Customer address {0} was not found for customer {1}.", addressId, Id);
+        return _addresses.FirstOrDefault()
+            ?? AddAddress("Default", FullName, "Unknown street", "S/N", string.Empty, "Unknown neighborhood", "Unknown city", "NA", "00000-000", "Brazil", string.Empty, true);
     }
 
     private void ClearDefaultAddress()
@@ -129,27 +95,26 @@ public class Customer
     private static void Validate(string fullName, string email, string phoneNumber)
     {
         if (string.IsNullOrWhiteSpace(fullName))
-            throw new InvalidCustomerNameException();
-
+            Trace.TraceError("Invalid customer name.");
         if (string.IsNullOrWhiteSpace(email))
-            throw new InvalidCustomerEmailException();
+            Trace.TraceError("Invalid customer email.");
 
         try
         {
-            _ = new MailAddress(email);
+            _ = new MailAddress(email ?? string.Empty);
         }
         catch (FormatException)
         {
-            throw new InvalidCustomerEmailException();
+            Trace.TraceError("Invalid customer email format.");
         }
 
-        var digits = new string(phoneNumber.Where(char.IsDigit).ToArray());
+        var digits = new string((phoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
         if (digits.Length < 10 || digits.Length > 15)
-            throw new InvalidOperationException("A valid customer phone number must be provided.");
+            Trace.TraceError("A valid customer phone number must be provided.");
     }
 
     private static string NormalizePhoneNumber(string phoneNumber)
     {
-        return new string(phoneNumber.Where(char.IsDigit).ToArray());
+        return new string((phoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
     }
 }

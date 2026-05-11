@@ -2,6 +2,7 @@ using System.Text.Json;
 using Confluent.Kafka;
 using ECommerce.Shared.Messaging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Order.Application.DTOs;
 using Order.Application.Interfaces;
 
@@ -10,10 +11,12 @@ namespace Order.Infrastructure.Messaging;
 public class KafkaOrderEventPublisher : IOrderEventPublisher
 {
     private readonly IConfiguration _configuration;
+    private readonly ILogger<KafkaOrderEventPublisher> _logger;
 
-    public KafkaOrderEventPublisher(IConfiguration configuration)
+    public KafkaOrderEventPublisher(IConfiguration configuration, ILogger<KafkaOrderEventPublisher> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task PublishOrderCreatedAsync(Order.Domain.Entities.Order order, CancellationToken cancellationToken = default)
@@ -21,7 +24,10 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
         var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
         if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for OrderService.");
+        {
+            _logger.LogWarning("Order created event was not published because Kafka:BootstrapServers was not configured.");
+            return;
+        }
 
         var topic = _configuration["Kafka:OrderPendingPaymentTopic"] ?? "order.pending-payment";
         var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
@@ -52,15 +58,22 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
                 .ToArray()
         };
 
-        using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
-        await producer.ProduceAsync(
-            topic,
-            new Message<string, string>
-            {
-                Key = order.Id.ToString(),
-                Value = JsonSerializer.Serialize(integrationEvent)
-            },
-            cancellationToken);
+        try
+        {
+            using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+            await producer.ProduceAsync(
+                topic,
+                new Message<string, string>
+                {
+                    Key = order.Id.ToString(),
+                    Value = JsonSerializer.Serialize(integrationEvent)
+                },
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to publish order.pending-payment event for order '{OrderId}'.", order.Id);
+        }
     }
 
     public async Task PublishOrderConfirmedAsync(Order.Domain.Entities.Order order, CancellationToken cancellationToken = default)
@@ -68,7 +81,10 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
         var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
         if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for OrderService.");
+        {
+            _logger.LogWarning("Order confirmed event was not published because Kafka:BootstrapServers was not configured.");
+            return;
+        }
 
         var topic = _configuration["Kafka:OrderConfirmedTopic"] ?? "order.confirmed";
         var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
@@ -96,15 +112,22 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
                 .ToArray()
         };
 
-        using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
-        await producer.ProduceAsync(
-            topic,
-            new Message<string, string>
-            {
-                Key = order.Id.ToString(),
-                Value = JsonSerializer.Serialize(integrationEvent)
-            },
-            cancellationToken);
+        try
+        {
+            using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+            await producer.ProduceAsync(
+                topic,
+                new Message<string, string>
+                {
+                    Key = order.Id.ToString(),
+                    Value = JsonSerializer.Serialize(integrationEvent)
+                },
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to publish order.confirmed event for order '{OrderId}'.", order.Id);
+        }
     }
 
     public async Task PublishOrderRejectedAsync(
@@ -119,7 +142,10 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
         var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
         if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for OrderService.");
+        {
+            _logger.LogWarning("Order rejected event was not published because Kafka:BootstrapServers was not configured.");
+            return;
+        }
 
         var topic = _configuration["Kafka:OrderRejectedTopic"] ?? "order.rejected";
         var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
@@ -144,14 +170,21 @@ public class KafkaOrderEventPublisher : IOrderEventPublisher
                 .ToArray()
         };
 
-        using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
-        await producer.ProduceAsync(
-            topic,
-            new Message<string, string>
-            {
-                Key = orderId.ToString(),
-                Value = JsonSerializer.Serialize(integrationEvent)
-            },
-            cancellationToken);
+        try
+        {
+            using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+            await producer.ProduceAsync(
+                topic,
+                new Message<string, string>
+                {
+                    Key = orderId.ToString(),
+                    Value = JsonSerializer.Serialize(integrationEvent)
+                },
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to publish order.rejected event for order '{OrderId}'.", orderId);
+        }
     }
 }

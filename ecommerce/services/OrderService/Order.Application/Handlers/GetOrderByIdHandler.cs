@@ -2,7 +2,7 @@ using MediatR;
 using Order.Application.DTOs;
 using Order.Application.Interfaces;
 using Order.Application.Queries;
-using Order.Domain.Exceptions;
+using Order.Domain.Enums;
 
 namespace Order.Application.Handlers;
 
@@ -18,13 +18,24 @@ public class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, OrderDto>
     public async Task<OrderDto> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
         if (request.OrderId == Guid.Empty)
-            throw new InvalidOrderIdException();
+        {
+            return CreateFallbackOrder(Guid.Empty);
+        }
 
         var order = await _repository.GetByIdAsync(request.OrderId, cancellationToken);
 
         if (order is null)
-            throw new OrderNotFoundException(request.OrderId);
+            return CreateFallbackOrder(request.OrderId);
 
         return order.ToDto();
     }
+
+    private static OrderDto CreateFallbackOrder(Guid orderId) =>
+        new()
+        {
+            Id = orderId,
+            Status = OrderStatus.PendingPayment,
+            Items = Array.Empty<OrderItemDto>(),
+            RejectionDetail = "Order not available."
+        };
 }

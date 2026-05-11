@@ -10,6 +10,8 @@ namespace Inventory.Infrastructure.Messaging;
 
 public class PaymentApprovedConsumerService : BackgroundService
 {
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(10);
+
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<PaymentApprovedConsumerService> _logger;
@@ -29,46 +31,57 @@ public class PaymentApprovedConsumerService : BackgroundService
 
     private async Task ConsumeAsync(string topic, string groupId, CancellationToken stoppingToken)
     {
-        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
-        if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for InventoryService.");
-
-        using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
-        {
-            BootstrapServers = bootstrapServers,
-            GroupId = groupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false,
-            AllowAutoCreateTopics = true
-        }).Build();
-
-        consumer.Subscribe(topic);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var result = consumer.Consume(stoppingToken);
-                if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                var bootstrapServers = _configuration["Kafka:BootstrapServers"];
+                if (string.IsNullOrWhiteSpace(bootstrapServers))
+                {
+                    _logger.LogWarning("Inventory payment-approved consumer is waiting because Kafka:BootstrapServers was not configured.");
+                    await Task.Delay(RetryDelay, stoppingToken);
                     continue;
+                }
 
-                using var scope = _serviceScopeFactory.CreateScope();
-                var processor = scope.ServiceProvider.GetRequiredService<PaymentApprovedMessageProcessor>();
+                using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
+                {
+                    BootstrapServers = bootstrapServers,
+                    GroupId = groupId,
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    EnableAutoCommit = false,
+                    AllowAutoCreateTopics = true
+                }).Build();
 
-                var integrationEvent = JsonSerializer.Deserialize<PaymentApprovedIntegrationEvent>(result.Message.Value);
-                if (integrationEvent is null)
-                    continue;
+                consumer.Subscribe(topic);
 
-                var processed = await processor.ProcessAsync(
-                    integrationEvent,
-                    result.Topic,
-                    result.Partition.Value,
-                    result.Offset.Value,
-                    groupId,
-                    stoppingToken);
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var result = consumer.Consume(stoppingToken);
+                    if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                        continue;
 
-                if (processed)
-                    consumer.Commit(result);
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var processor = scope.ServiceProvider.GetRequiredService<PaymentApprovedMessageProcessor>();
+
+                    var integrationEvent = JsonSerializer.Deserialize<PaymentApprovedIntegrationEvent>(result.Message.Value);
+                    if (integrationEvent is null)
+                    {
+                        _logger.LogWarning("Inventory payment-approved consumer ignored a message because it could not deserialize PaymentApprovedIntegrationEvent.");
+                        consumer.Commit(result);
+                        continue;
+                    }
+
+                    var processed = await processor.ProcessAsync(
+                        integrationEvent,
+                        result.Topic,
+                        result.Partition.Value,
+                        result.Offset.Value,
+                        groupId,
+                        stoppingToken);
+
+                    if (processed)
+                        consumer.Commit(result);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -77,6 +90,7 @@ public class PaymentApprovedConsumerService : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Unexpected error while consuming payment.approved.");
+                await Task.Delay(RetryDelay, stoppingToken);
             }
         }
     }

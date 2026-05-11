@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Notification.Domain.Entities;
 
 public class ProcessedKafkaMessage
@@ -30,8 +32,8 @@ public class ProcessedKafkaMessage
     private static string RequireValue(string value, string paramName)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"{paramName} is required.");
+            Trace.TraceError("{0} is required.", paramName);
 
-        return value.Trim();
+        return (value ?? string.Empty).Trim();
     }
 }

@@ -1,7 +1,6 @@
 using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Queries;
-using Catalog.Domain.Exceptions;
 using MediatR;
 
 namespace Catalog.Application.Handlers;
@@ -15,12 +14,12 @@ public class GetCategoryByIdHandler : IRequestHandler<GetCategoryByIdQuery, Cate
     public async Task<CategoryDto?> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty)
-            throw new InvalidCategoryIdException();
+            return new CategoryDto { Id = Guid.Empty };
 
         var category = await _repository.GetByIdAsync(request.Id, cancellationToken);
 
         if (category is null)
-            throw new CategoryNotFoundException(request.Id);
+            return new CategoryDto { Id = request.Id };
 
         return CategoryDto.MapFromReadModel(category);
     }

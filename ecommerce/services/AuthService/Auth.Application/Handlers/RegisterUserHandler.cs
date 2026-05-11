@@ -2,7 +2,6 @@ using Auth.Application.Commands;
 using Auth.Application.DTOs;
 using Auth.Application.Interfaces;
 using Auth.Domain.Entities;
-using Auth.Domain.Exceptions;
 using MediatR;
 
 namespace Auth.Application.Handlers;
@@ -32,7 +31,14 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, AuthResp
         var existingUser = await _repository.GetByEmailAsync(email, cancellationToken);
 
         if (existingUser is not null)
-            throw new UserAlreadyExistsException(email);
+            return new AuthResponseDto
+            {
+                UserId = existingUser.Id,
+                CustomerId = existingUser.CustomerId,
+                FullName = existingUser.FullName,
+                Email = existingUser.Email,
+                AccessToken = string.Empty
+            };
 
         var passwordHash = _passwordHasher.Hash(request.Password);
         var user = new AuthUser(request.FullName, email, passwordHash);

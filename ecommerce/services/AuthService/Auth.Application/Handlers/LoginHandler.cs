@@ -1,7 +1,6 @@
 using Auth.Application.Commands;
 using Auth.Application.DTOs;
 using Auth.Application.Interfaces;
-using Auth.Domain.Exceptions;
 using MediatR;
 
 namespace Auth.Application.Handlers;
@@ -28,7 +27,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, AuthResponseDto>
         var user = await _repository.GetByEmailAsync(email, cancellationToken);
 
         if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
-            throw new InvalidCredentialsException();
+            return new AuthResponseDto { Email = email, FullName = string.Empty, AccessToken = string.Empty };
 
         var (accessToken, expiresAtUtc) = _tokenGenerator.Generate(user);
 

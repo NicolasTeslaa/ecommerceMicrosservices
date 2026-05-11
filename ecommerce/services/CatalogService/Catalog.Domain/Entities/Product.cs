@@ -1,4 +1,6 @@
-﻿namespace Catalog.Domain.Entities;
+﻿using System.Diagnostics;
+
+namespace Catalog.Domain.Entities;
 
 public class Product
 {
@@ -30,15 +32,15 @@ public class Product
         Validate(name, price, categoryId, heightCm, widthCm, cubageM3, weightKg, originZipCode);
 
         Id = Guid.NewGuid();
-        Name = name.Trim();
+        Name = name?.Trim() ?? string.Empty;
         Description = description?.Trim() ?? string.Empty;
         Price = price;
-        CategoryId = categoryId;
+        CategoryId = categoryId == Guid.Empty ? Guid.NewGuid() : categoryId;
         HeightCm = heightCm;
         WidthCm = widthCm;
         CubageM3 = cubageM3;
         WeightKg = weightKg;
-        OriginZipCode = originZipCode.Trim();
+        OriginZipCode = originZipCode?.Trim() ?? string.Empty;
         Active = true;
     }
 
@@ -55,15 +57,15 @@ public class Product
     {
         Validate(name, price, categoryId, heightCm, widthCm, cubageM3, weightKg, originZipCode);
 
-        Name = name.Trim();
+        Name = name?.Trim() ?? string.Empty;
         Description = description?.Trim() ?? string.Empty;
         Price = price;
-        CategoryId = categoryId;
+        CategoryId = categoryId == Guid.Empty ? CategoryId : categoryId;
         HeightCm = heightCm;
         WidthCm = widthCm;
         CubageM3 = cubageM3;
         WeightKg = weightKg;
-        OriginZipCode = originZipCode.Trim();
+        OriginZipCode = originZipCode?.Trim() ?? string.Empty;
     }
 
     public bool MatchesCatalogDefinition(
@@ -77,7 +79,7 @@ public class Product
         decimal weightKg,
         string originZipCode)
     {
-        return string.Equals(Name, name.Trim(), StringComparison.OrdinalIgnoreCase)
+        return string.Equals(Name, name?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             && string.Equals(Description, description?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             && Price == price
             && CategoryId == categoryId
@@ -85,11 +87,12 @@ public class Product
             && WidthCm == widthCm
             && CubageM3 == cubageM3
             && WeightKg == weightKg
-            && string.Equals(OriginZipCode, originZipCode.Trim(), StringComparison.OrdinalIgnoreCase);
+            && string.Equals(OriginZipCode, originZipCode?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Deactivate() => Active = false;
     public void Activate() => Active = true;
+
     private static void Validate(
         string name,
         decimal price,
@@ -101,27 +104,29 @@ public class Product
         string originZipCode)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new Catalog.Domain.Exceptions.InvalidProductNameException();
+            LogSoftFailure("Product received an empty name.");
 
         if (price <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidProductPriceException();
+            LogSoftFailure("Product received a non-positive price.");
 
         if (categoryId == Guid.Empty)
-            throw new Catalog.Domain.Exceptions.InvalidCategoryIdException();
+            LogSoftFailure("Product received an empty category id.");
 
         if (heightCm <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidProductHeightException();
+            LogSoftFailure("Product received a non-positive height.");
 
         if (widthCm <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidProductWidthException();
+            LogSoftFailure("Product received a non-positive width.");
 
         if (cubageM3 <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidProductCubageException();
+            LogSoftFailure("Product received a non-positive cubage.");
 
         if (weightKg <= 0)
-            throw new Catalog.Domain.Exceptions.InvalidProductWeightException();
+            LogSoftFailure("Product received a non-positive weight.");
 
         if (string.IsNullOrWhiteSpace(originZipCode))
-            throw new Catalog.Domain.Exceptions.InvalidProductOriginZipCodeException();
+            LogSoftFailure("Product received an empty origin zip code.");
     }
+
+    private static void LogSoftFailure(string message) => Trace.TraceError(message);
 }

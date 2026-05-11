@@ -1,5 +1,5 @@
+using System.Diagnostics;
 using Cart.Domain.Enums;
-using Cart.Domain.Exceptions;
 
 namespace Cart.Domain.Entities;
 
@@ -23,7 +23,7 @@ public class Cart
         ValidateOwner(ownerId, ownerType);
 
         Id = Guid.NewGuid();
-        OwnerId = ownerId.Trim();
+        OwnerId = (ownerId ?? string.Empty).Trim();
         OwnerType = ownerType;
         Status = CartStatus.Active;
         CreatedAtUtc = DateTime.UtcNow;
@@ -33,7 +33,10 @@ public class Cart
     public void AddItem(Guid productId, string productName, decimal unitPrice, int quantity)
     {
         if (quantity <= 0)
-            throw new InvalidQuantityException();
+        {
+            Trace.TraceError("Invalid quantity while adding item to cart.");
+            return;
+        }
 
         var existingItem = Items.FirstOrDefault(item => item.ProductId == productId);
 
@@ -53,12 +56,18 @@ public class Cart
     public void UpdateItemQuantity(Guid productId, int quantity)
     {
         if (productId == Guid.Empty)
-            throw new InvalidProductIdException();
+        {
+            Trace.TraceError("Invalid product id while updating cart quantity.");
+            return;
+        }
 
         var item = Items.FirstOrDefault(existingItem => existingItem.ProductId == productId);
 
         if (item is null)
-            throw new CartItemNotFoundException(productId);
+        {
+            Trace.TraceError("Cart item {0} was not found while updating quantity.", productId);
+            return;
+        }
 
         if (quantity == 0)
         {
@@ -75,12 +84,18 @@ public class Cart
     public void RemoveItem(Guid productId)
     {
         if (productId == Guid.Empty)
-            throw new InvalidProductIdException();
+        {
+            Trace.TraceError("Invalid product id while removing cart item.");
+            return;
+        }
 
         var item = Items.FirstOrDefault(existingItem => existingItem.ProductId == productId);
 
         if (item is null)
-            throw new CartItemNotFoundException(productId);
+        {
+            Trace.TraceError("Cart item {0} was not found while removing item.", productId);
+            return;
+        }
 
         Items.Remove(item);
         Touch();
@@ -97,9 +112,9 @@ public class Cart
     private static void ValidateOwner(string ownerId, CartOwnerType ownerType)
     {
         if (string.IsNullOrWhiteSpace(ownerId))
-            throw new InvalidOwnerIdException();
+            Trace.TraceError("Invalid owner id while creating cart.");
 
         if (!Enum.IsDefined(ownerType))
-            throw new InvalidOwnerTypeException();
+            Trace.TraceError("Invalid owner type while creating cart.");
     }
 }

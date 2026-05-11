@@ -12,6 +12,7 @@ namespace Auth.Infrastructure.Messaging;
 public class AuthOutboxPublisherService : BackgroundService
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan StartupRetryDelay = TimeSpan.FromSeconds(10);
     private const int BatchSize = 20;
 
     private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -32,22 +33,26 @@ public class AuthOutboxPublisherService : BackgroundService
     {
         await Task.Yield();
 
-        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
-
-        if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for AuthService.");
-
-        var producerConfig = new ProducerConfig
-        {
-            BootstrapServers = bootstrapServers
-        };
-
-        using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                var bootstrapServers = _configuration["Kafka:BootstrapServers"];
+
+                if (string.IsNullOrWhiteSpace(bootstrapServers))
+                {
+                    _logger.LogWarning(
+                        "Auth outbox publisher is waiting because Kafka:BootstrapServers was not configured.");
+                    await Task.Delay(StartupRetryDelay, stoppingToken);
+                    continue;
+                }
+
+                var producerConfig = new ProducerConfig
+                {
+                    BootstrapServers = bootstrapServers
+                };
+
+                using var producer = new ProducerBuilder<string, string>(producerConfig).Build();
                 using var scope = _serviceScopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
 
@@ -73,7 +78,7 @@ public class AuthOutboxPublisherService : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Unexpected error while publishing AuthService outbox messages.");
-                await Task.Delay(IdleDelay, stoppingToken);
+                await Task.Delay(StartupRetryDelay, stoppingToken);
             }
         }
     }

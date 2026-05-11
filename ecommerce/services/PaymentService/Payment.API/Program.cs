@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 using Payment.API.Hubs;
 using Payment.API.Middleware;
 using Payment.Application.Handlers;
@@ -57,9 +58,28 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<IPaymentRealtimeNotifier, SignalRPaymentRealtimeNotifier>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSection["SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey was not configured.");
-var issuer = jwtSection["Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer was not configured.");
-var audience = jwtSection["Audience"] ?? throw new InvalidOperationException("Jwt:Audience was not configured.");
+var secretKey = jwtSection["SecretKey"];
+var issuer = jwtSection["Issuer"];
+var audience = jwtSection["Audience"];
+var missingJwtSettings = new List<string>();
+
+if (string.IsNullOrWhiteSpace(secretKey))
+{
+    missingJwtSettings.Add("Jwt:SecretKey");
+    secretKey = "development-fallback-secret-key-change-me-1234567890";
+}
+
+if (string.IsNullOrWhiteSpace(issuer))
+{
+    missingJwtSettings.Add("Jwt:Issuer");
+    issuer = "missing-issuer";
+}
+
+if (string.IsNullOrWhiteSpace(audience))
+{
+    missingJwtSettings.Add("Jwt:Audience");
+    audience = "missing-audience";
+}
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -96,11 +116,24 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("PaymentStartup");
+
+if (missingJwtSettings.Count > 0)
+{
+    startupLogger.LogError("Payment API started with fallback JWT settings because these keys were missing: {MissingKeys}.", string.Join(", ", missingJwtSettings));
+}
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
-    await dbContext.Database.MigrateAsync();
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+        await dbContext.Database.MigrateAsync();
+    }
+    catch (Exception exception)
+    {
+        startupLogger.LogError(exception, "Payment API failed to apply database migrations during startup.");
+    }
 }
 
 if (app.Environment.IsDevelopment())

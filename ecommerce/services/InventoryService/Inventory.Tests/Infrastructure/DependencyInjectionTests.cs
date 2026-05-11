@@ -9,12 +9,14 @@ namespace Inventory.Tests.Infrastructure;
 public class DependencyInjectionTests
 {
     [Fact]
-    public void AddInfrastructure_ShouldThrow_WhenConnectionStringIsMissing()
+    public void AddInfrastructure_ShouldRegisterCoreServices_WhenConnectionStringIsMissing()
     {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder().Build();
 
-        Assert.Throws<InvalidOperationException>(() => services.AddInfrastructure(configuration));
+        services.AddInfrastructure(configuration);
+
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IInventoryRepository));
     }
 
     [Fact]

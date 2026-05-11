@@ -16,6 +16,8 @@ namespace Order.Infrastructure.Messaging;
 
 public class OrderProcessorConsumerService : BackgroundService
 {
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(10);
+
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OrderProcessorConsumerService> _logger;
@@ -34,37 +36,44 @@ public class OrderProcessorConsumerService : BackgroundService
     {
         await Task.Yield();
 
-        var bootstrapServers = _configuration["Kafka:BootstrapServers"];
-
-        if (string.IsNullOrWhiteSpace(bootstrapServers))
-            throw new InvalidOperationException("Kafka:BootstrapServers was not configured for Order processor.");
-
-        var topic = _configuration["Kafka:OrderProcessingTopic"] ?? "order.processing.requested";
-        var groupId = _configuration["Kafka:OrderProcessingConsumerGroup"] ?? "order-processor";
-
-        using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
-        {
-            BootstrapServers = bootstrapServers,
-            GroupId = groupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            AllowAutoCreateTopics = true,
-            EnableAutoCommit = false
-        }).Build();
-
-        consumer.Subscribe(topic);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var result = consumer.Consume(stoppingToken);
+                var bootstrapServers = _configuration["Kafka:BootstrapServers"];
 
-                if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                if (string.IsNullOrWhiteSpace(bootstrapServers))
+                {
+                    _logger.LogWarning("Order processor consumer is waiting because Kafka:BootstrapServers was not configured.");
+                    await Task.Delay(RetryDelay, stoppingToken);
                     continue;
+                }
 
-                using var scope = _serviceScopeFactory.CreateScope();
-                await ProcessMessageAsync(scope.ServiceProvider, result.Message.Value, stoppingToken);
-                consumer.Commit(result);
+                var topic = _configuration["Kafka:OrderProcessingTopic"] ?? "order.processing.requested";
+                var groupId = _configuration["Kafka:OrderProcessingConsumerGroup"] ?? "order-processor";
+
+                using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
+                {
+                    BootstrapServers = bootstrapServers,
+                    GroupId = groupId,
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    AllowAutoCreateTopics = true,
+                    EnableAutoCommit = false
+                }).Build();
+
+                consumer.Subscribe(topic);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var result = consumer.Consume(stoppingToken);
+
+                    if (string.IsNullOrWhiteSpace(result?.Message?.Value))
+                        continue;
+
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    await ProcessMessageAsync(scope.ServiceProvider, result.Message.Value, stoppingToken);
+                    consumer.Commit(result);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -73,6 +82,7 @@ public class OrderProcessorConsumerService : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Unexpected error while consuming order.processing.requested.");
+                await Task.Delay(RetryDelay, stoppingToken);
             }
         }
     }
@@ -99,8 +109,14 @@ public class OrderProcessorConsumerService : BackgroundService
         if (outboxMessage is null || outboxMessage.ProcessedAtUtc is not null)
             return;
 
-        var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(outboxMessage.Payload)
-            ?? throw new InvalidOperationException($"Outbox message '{outboxMessageId}' has an invalid payload.");
+        var request = JsonSerializer.Deserialize<OrderProcessingRequestDto>(outboxMessage.Payload);
+        if (request is null)
+        {
+            _logger.LogWarning("Order processor ignored outbox message '{OutboxMessageId}' because the payload was invalid.", outboxMessageId);
+            outboxMessage.RegisterProcessingFailure("Invalid order processing payload.");
+            await writeDbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
 
         var availabilityResult = await inventoryOrderReservationClient.ReserveAsync(
             request.OrderId,
@@ -214,7 +230,7 @@ public class OrderProcessorConsumerService : BackgroundService
         {
             outboxMessage.RegisterProcessingFailure(exception.Message);
             await writeDbContext.SaveChangesAsync(cancellationToken);
-            throw;
+            _logger.LogError(exception, "Order processor failed to project or publish order '{OrderId}'.", order.Id);
         }
     }
 

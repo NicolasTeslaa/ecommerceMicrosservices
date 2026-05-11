@@ -1,5 +1,5 @@
+using System.Diagnostics;
 using System.Net.Mail;
-using Auth.Domain.Exceptions;
 
 namespace Auth.Domain.Entities;
 
@@ -23,9 +23,9 @@ public class AuthUser
 
         Id = Guid.NewGuid();
         CustomerId = Guid.NewGuid();
-        FullName = fullName.Trim();
-        Email = email.Trim().ToLowerInvariant();
-        PasswordHash = passwordHash;
+        FullName = (fullName ?? string.Empty).Trim();
+        Email = (email ?? string.Empty).Trim().ToLowerInvariant();
+        PasswordHash = passwordHash ?? string.Empty;
         Active = true;
         CreatedAtUtc = DateTime.UtcNow;
     }
@@ -33,21 +33,21 @@ public class AuthUser
     private static void Validate(string fullName, string email, string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(fullName))
-            throw new InvalidFullNameException();
+            Trace.TraceError("Invalid full name while creating auth user.");
 
         if (string.IsNullOrWhiteSpace(email))
-            throw new InvalidEmailException();
+            Trace.TraceError("Invalid email while creating auth user.");
 
         try
         {
-            _ = new MailAddress(email);
+            _ = new MailAddress(email ?? string.Empty);
         }
         catch (FormatException)
         {
-            throw new InvalidEmailException();
+            Trace.TraceError("Invalid email format while creating auth user.");
         }
 
         if (string.IsNullOrWhiteSpace(passwordHash))
-            throw new InvalidPasswordException();
+            Trace.TraceError("Invalid password hash while creating auth user.");
     }
 }

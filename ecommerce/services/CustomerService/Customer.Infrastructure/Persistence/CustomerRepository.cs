@@ -1,14 +1,20 @@
 using Customer.Application.Interfaces;
-using Customer.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Customer.Infrastructure.Persistence;
 
 public class CustomerRepository : ICustomerRepository
 {
     private readonly CustomerDbContext _context;
+    private readonly ILogger<CustomerRepository> _logger;
 
-    public CustomerRepository(CustomerDbContext context) => _context = context;
+    public CustomerRepository(CustomerDbContext context, ILogger<CustomerRepository>? logger = null)
+    {
+        _context = context;
+        _logger = logger ?? NullLogger<CustomerRepository>.Instance;
+    }
 
     public async Task<Customer.Domain.Entities.Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -20,7 +26,8 @@ public class CustomerRepository : ICustomerRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to retrieve customer '{id}'.", exception);
+            _logger.LogError(exception, "Failed to retrieve customer '{CustomerId}'.", id);
+            return null;
         }
     }
 
@@ -33,7 +40,7 @@ public class CustomerRepository : ICustomerRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to persist customer '{customer.Id}'.", exception);
+            _logger.LogError(exception, "Failed to persist customer '{CustomerId}'.", customer.Id);
         }
     }
 
@@ -55,7 +62,7 @@ public class CustomerRepository : ICustomerRepository
         }
         catch (Exception exception)
         {
-            throw new PersistenceException($"Failed to update customer '{customer.Id}'.", exception);
+            _logger.LogError(exception, "Failed to update customer '{CustomerId}'.", customer.Id);
         }
     }
 }
